@@ -252,7 +252,7 @@ def chat():
                 ]
             })
             # Sử dụng model hỗ trợ đọc ảnh của Groq
-            active_model = "llama-3.1-8b-instant"
+            active_model = "llama-3.2-11b-vision"
             
         # Nếu chỉ gửi text bình thường -> Dùng Model Text siêu tốc
         else:
