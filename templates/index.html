@@ -1552,12 +1552,12 @@ input#vertices {
 
 
 <script>
-    // 0. Khởi tạo bộ nhớ và biến ảnh
+    // 0. Khởi tạo bộ nhớ, biến ảnh và trạng thái giọng nói
     let chatHistory = [];
     let currentImageBase64 = null;
     let isBotVoiceEnabled = true; // Mặc định bật giọng nói
 
-    // --- HÀM MỚI: Bật tắt giọng nói ---
+    // --- HÀM: Bật tắt giọng nói ---
     function toggleBotVoice() {
         isBotVoiceEnabled = !isBotVoiceEnabled;
         document.getElementById('btn-bot-voice').innerText = isBotVoiceEnabled ? "🔊" : "🔇";
@@ -1566,7 +1566,7 @@ input#vertices {
         }
     }
 
-    // --- HÀM MỚI: Đọc văn bản bằng giọng "Chị Google" ---
+    // --- HÀM: Đọc văn bản bằng giọng "Chị Google" ---
     function speakText(text) {
         if (!isBotVoiceEnabled || !('speechSynthesis' in window)) return;
 
@@ -1589,6 +1589,7 @@ input#vertices {
         // Phát âm thanh
         window.speechSynthesis.speak(utterance);
     }
+
     // 1. Xử lý khi người dùng chọn ảnh
     document.getElementById('image-input').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -1615,47 +1616,6 @@ input#vertices {
     }
 
     // 3. Hàm gửi tin nhắn và ảnh
-   // 0. Khởi tạo bộ nhớ, biến ảnh và trạng thái giọng nói
-    let chatHistory = [];
-    let currentImageBase64 = null;
-    let isBotVoiceEnabled = true; // Mặc định bật giọng nói
-
-    // --- HÀM MỚI: Bật tắt giọng nói ---
-    function toggleBotVoice() {
-        isBotVoiceEnabled = !isBotVoiceEnabled;
-        document.getElementById('btn-bot-voice').innerText = isBotVoiceEnabled ? "🔊" : "🔇";
-        if (!isBotVoiceEnabled) {
-            window.speechSynthesis.cancel(); // Tắt ngay lập tức nếu đang nói
-        }
-    }
-
-    // --- HÀM MỚI: Đọc văn bản bằng giọng "Chị Google" ---
-    function speakText(text) {
-        if (!isBotVoiceEnabled || !('speechSynthesis' in window)) return;
-
-        // Dừng câu nói trước đó nếu chưa nói xong
-        window.speechSynthesis.cancel();
-
-        // Lọc bỏ các ký tự đặc biệt (như Markdown **, *, #) để đọc mượt hơn
-        const cleanText = text.replace(/[*#]/g, '');
-
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = 'vi-VN'; // Ép trình duyệt dùng giọng tiếng Việt
-        utterance.rate = 1.0;     // Tốc độ đọc (1.0 là bình thường)
-        utterance.pitch = 1.0;    // Độ thanh của giọng
-
-        // Cố gắng tìm đích danh giọng "Google tiếng Việt" nếu trình duyệt có hỗ trợ
-        const voices = window.speechSynthesis.getVoices();
-        const vnVoice = voices.find(v => v.name.includes('Google') && v.lang.includes('vi'));
-        if (vnVoice) utterance.voice = vnVoice;
-
-        // Phát âm thanh
-        window.speechSynthesis.speak(utterance);
-    }
-
-    // ... (Giữ nguyên các đoạn code cũ của bạn như xử lý ảnh, ẩn hiện khung chat) ...
-
-    // 3. Hàm gửi tin nhắn và ảnh (CẬP NHẬT THÊM TÍNH NĂNG ĐỌC)
     async function sendMessage() {
         const input = document.getElementById('user-msg');
         const preview = document.getElementById('file-preview');
@@ -1694,10 +1654,8 @@ input#vertices {
             if (data.answer) {
                 loadingMsg.innerText = data.answer;
 
-                // ==========================================
-                // GỌI HÀM ĐỌC GIỌNG NÓI Ở ĐÂY NÀY!
+                // Gọi hàm đọc giọng nói
                 speakText(data.answer);
-                // ==========================================
 
                 // Cập nhật trí nhớ
                 chatHistory.push({ "role": "user", "content": message || "Gửi ảnh đồ thị" });
@@ -1716,7 +1674,6 @@ input#vertices {
         }
     }
 
-    // (Giữ nguyên hàm appendMessage cũ của bạn)
     // 4. Hàm vẽ tin nhắn lên màn hình
     function appendMessage(text, className, id = null) {
         const content = document.getElementById('chat-content');
@@ -1729,7 +1686,6 @@ input#vertices {
         return id;
     }
 </script>
-    
 
 <header>
     <div class="logo-container">
