@@ -1528,6 +1528,7 @@ input#vertices {
             <button onclick="sendMessage()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
+            
         </div>
     </div>
     <div id="chat-circle" onclick="toggleChat()">
@@ -1536,72 +1537,95 @@ input#vertices {
 </div>
 
 
-<script>
-    // 0. Khởi tạo mảng lưu trữ lịch sử trò chuyện (TRÍ NHỚ CHO AI)
-    let chatHistory = [];
 
-    // 1. Hàm ẩn hiện khung chat (Giữ nguyên)
+<script>
+    // 0. Khởi tạo
+    let chatHistory = [];
+    let currentImageBase64 = null; // Lưu trữ ảnh tạm thời
+
+    // 1. Lắng nghe sự kiện chọn file (Thêm mới)
+    // Bạn cần đảm bảo có thẻ <input type="file" id="image-input"> trong HTML
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'image-input') {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    currentImageBase64 = event.target.result;
+                    // Thông báo cho người dùng đã chọn ảnh
+                    appendMessage("📷 Đã chọn ảnh: " + file.name, 'user-msg');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    });
+
+    // 2. Hàm ẩn hiện khung chat (Giữ nguyên)
     function toggleChat() {
         const chatBox = document.getElementById('chat-box');
         chatBox.classList.toggle('chat-hidden');
-        // Tự động focus vào ô nhập khi mở chat
         if (!chatBox.classList.contains('chat-hidden')) {
             setTimeout(() => document.getElementById('user-msg').focus(), 300);
         }
     }
 
-    // 2. Hàm gửi tin nhắn (Đã nâng cấp)
+    // 3. Hàm gửi tin nhắn (Đã nâng cấp Vision)
     async function sendMessage() {
         const input = document.getElementById('user-msg');
         const message = input.value.trim();
-        if (!message) return;
+        
+        // Nếu không có cả chữ lẫn ảnh thì không gửi
+        if (!message && !currentImageBase64) return;
 
-        // Hiển thị tin nhắn của người dùng lên màn hình
-        appendMessage(message, 'user-msg');
+        // Hiển thị tin nhắn chữ của người dùng (nếu có)
+        if (message) appendMessage(message, 'user-msg');
         input.value = '';
 
-        // Hiển thị trạng thái chờ từ Bot
+        // Hiển thị trạng thái chờ
         const tempId = 'loading-' + Date.now();
-        appendMessage('Đang suy nghĩ...', 'bot-msg', tempId);
+        appendMessage('LinLin đang phân tích...', 'bot-msg', tempId);
 
         try {
-            // Gọi đến Route /chat trong app.py
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     message: message,
-                    history: chatHistory  // GỬI KÈM TRÍ NHỚ LÊN SERVER
+                    image: currentImageBase64, // Gửi ảnh Base64 lên server
+                    history: chatHistory 
                 })
             });
 
             const data = await response.json();
-            
             const loadingMsg = document.getElementById(tempId);
+
             if (data.answer) {
-                // Thay thế dòng "Đang suy nghĩ..." bằng câu trả lời thật
                 loadingMsg.innerText = data.answer;
 
-                // CẬP NHẬT TRÍ NHỚ (Chỉ lưu khi AI trả lời thành công)
-                chatHistory.push({ "role": "user", "content": message });
-                chatHistory.push({ "role": "assistant", "content": data.answer });
+                // Cập nhật trí nhớ (Chỉ lưu tin nhắn chữ)
+                if (message) {
+                    chatHistory.push({ "role": "user", "content": message });
+                    chatHistory.push({ "role": "assistant", "content": data.answer });
+                }
 
-                // Giới hạn trí nhớ: Giữ lại 8 tin nhắn gần nhất (4 vòng hỏi - đáp)
-                // Điều này giúp tránh bị quá tải dữ liệu gửi lên server
                 if (chatHistory.length > 8) {
                     chatHistory = chatHistory.slice(chatHistory.length - 8);
                 }
-
             } else {
-                loadingMsg.innerText = "Xin lỗi, mình gặp lỗi kết nối.";
+                loadingMsg.innerText = "Xin lỗi, LinLin không nhận diện được đồ thị này.";
             }
         } catch (error) {
             console.error("Lỗi:", error);
-            document.getElementById(tempId).innerText = "Hệ thống AI đang bận. Bạn thử lại sau nhé!";
+            document.getElementById(tempId).innerText = "Lỗi kết nối Vision. Bạn thử lại nhé!";
+        } finally {
+            // Xóa dữ liệu ảnh sau khi gửi xong để lần sau gửi ảnh mới
+            currentImageBase64 = null;
+            const fileInput = document.getElementById('image-input');
+            if (fileInput) fileInput.value = ''; 
         }
     }
 
-    // 3. Hàm tạo phần tử tin nhắn mới (Giữ nguyên)
+    // 4. Hàm tạo phần tử tin nhắn (Giữ nguyên)
     function appendMessage(text, className, id = null) {
         const content = document.getElementById('chat-content');
         const msgDiv = document.createElement('div');
@@ -1609,13 +1633,10 @@ input#vertices {
         if (id) msgDiv.id = id;
         msgDiv.innerText = text;
         content.appendChild(msgDiv);
-        
-        // Luôn cuộn xuống tin nhắn mới nhất
         content.scrollTop = content.scrollHeight;
         return id;
     }
 </script>
-
     
 
 <header>
