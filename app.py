@@ -252,7 +252,7 @@ def chat():
                 ]
             })
             # Sử dụng model hỗ trợ đọc ảnh của Groq
-            active_model = "llama-3.2-11b-vision-preview"
+            active_model = "llama-3.2-90b-vision-preview"
             
         # Nếu chỉ gửi text bình thường -> Dùng Model Text siêu tốc
         else:
@@ -297,8 +297,8 @@ Dưới đây là cơ sở dữ liệu nội bộ MỚI NHẤT của trường. 
 Quy tắc:
 1. Xưng hô là 'Lavie' và gọi người dùng là 'bạn'.
 2. Nếu câu hỏi nằm trong cơ sở dữ liệu nội bộ, hãy trả lời chính xác theo đó.
-3. Nếu không có dữ liệu nội bộ, hãy dùng kiến thức chung nhưng thể hiện sự khiêm tốn.
-4. Trả lời ngắn gọn, tự nhiên, hiện đại, có emoji."""
+3. Nếu không có dữ liệu nội bộ, hãy dùng kiến thức ở trên internet.
+4. Trả lời đầy đủ, tự nhiên, hiện đại, có emoji."""
 
         messages = [{"role": "system", "content": system_prompt}]
         
