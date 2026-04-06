@@ -236,8 +236,8 @@ def chat():
     image_data = data.get('image', None) # Lấy dữ liệu ảnh nếu có
 
     try:
-        # Cấu hình tính cách của LinLin
-        system_prompt = "Bạn là LinLin, trợ lý ảo thông minh của Học viện Kỹ thuật Mật mã (KMA). Khi được cung cấp hình ảnh đồ thị, hãy phân tích kỹ các đỉnh, các cạnh và suy luận logic để tìm ra sắc số (chromatic number) của đồ thị đó. Giải thích từng bước cho sinh viên dễ hiểu."
+        # Cấu hình tính cách của Lavie
+        system_prompt = "Bạn là Lavie, trợ lý ảo thông minh của Học viện Kỹ thuật Mật mã (KMA). Khi được cung cấp hình ảnh đồ thị, hãy phân tích kỹ các đỉnh, các cạnh và suy luận logic để tìm ra sắc số (chromatic number) của đồ thị đó. Giải thích từng bước cho sinh viên dễ hiểu."
         
         messages = [{"role": "system", "content": system_prompt}]
 
@@ -252,7 +252,7 @@ def chat():
                 ]
             })
             # Sử dụng model hỗ trợ đọc ảnh của Groq
-            active_model = "llama-3.2-90b-vision-preview"
+            active_model = "llama-3.1-8b-instant"
             
         # Nếu chỉ gửi text bình thường -> Dùng Model Text siêu tốc
         else:
@@ -271,7 +271,7 @@ def chat():
         
     except Exception as e:
         print(f"Lỗi AI: {e}")
-        return jsonify({"answer": f"Xin lỗi, LinLin gặp lỗi khi xử lý: {str(e)}"}), 500
+        return jsonify({"answer": f"Xin lỗi, Lavie gặp lỗi khi xử lý: {str(e)}"}), 500
 
     data = request.json
     user_message = data.get('message', '')
