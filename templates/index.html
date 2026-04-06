@@ -1557,6 +1557,16 @@ input#vertices {
     let currentImageBase64 = null;
     let isBotVoiceEnabled = true; // Mặc định bật giọng nói
 
+    // Tải trước danh sách giọng nói của trình duyệt (Khắc phục lỗi chưa kịp load đã đọc)
+    let availableVoices = [];
+    function loadVoices() {
+        availableVoices = window.speechSynthesis.getVoices();
+    }
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices(); // Gọi lần đầu
+    }
+
     // --- HÀM: Bật tắt giọng nói ---
     function toggleBotVoice() {
         isBotVoiceEnabled = !isBotVoiceEnabled;
@@ -1566,27 +1576,46 @@ input#vertices {
         }
     }
 
-    // --- HÀM: Đọc văn bản bằng giọng "Chị Google" ---
+    // --- HÀM MỚI: Làm sạch văn bản để đọc tự nhiên hơn ---
+    function cleanTextForSpeech(text) {
+        let clean = text;
+        // Bỏ các ký tự định dạng Markdown (*, _, #, `)
+        clean = clean.replace(/[*#_~`>]/g, '');
+        // Thay thế các đường link bằng từ "đường dẫn" để tránh máy đọc từng chữ cái http...
+        clean = clean.replace(/(https?:\/\/[^\s]+)/g, 'một đường dẫn');
+        // Loại bỏ các emoji (tùy chọn) vì một số trình duyệt đọc sai tên emoji
+        clean = clean.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+        return clean.trim();
+    }
+
+    // --- HÀM: Đọc văn bản lưu loát ---
     function speakText(text) {
         if (!isBotVoiceEnabled || !('speechSynthesis' in window)) return;
 
         // Dừng câu nói trước đó nếu chưa nói xong
         window.speechSynthesis.cancel();
 
-        // Lọc bỏ các ký tự đặc biệt (như Markdown **, *, #) để đọc mượt hơn
-        const cleanText = text.replace(/[*#]/g, '');
+        const cleanText = cleanTextForSpeech(text);
+        if (!cleanText) return;
 
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = 'vi-VN'; // Ép trình duyệt dùng giọng tiếng Việt
-        utterance.rate = 1.0;     // Tốc độ đọc (1.0 là bình thường)
-        utterance.pitch = 1.0;    // Độ thanh của giọng
+        utterance.lang = 'vi-VN'; // Ép ngôn ngữ tiếng Việt
+        utterance.rate = 1.05;    // Tăng tốc độ đọc lên một xíu (1.05) để nghe năng động, bớt rề rà
+        utterance.pitch = 1.0;
 
-        // Cố gắng tìm đích danh giọng "Google tiếng Việt" nếu trình duyệt có hỗ trợ
-        const voices = window.speechSynthesis.getVoices();
-        const vnVoice = voices.find(v => v.name.includes('Google') && v.lang.includes('vi'));
-        if (vnVoice) utterance.voice = vnVoice;
+        // Nếu danh sách giọng nói vẫn trống, thử lấy lại lần nữa
+        if (availableVoices.length === 0) loadVoices();
 
-        // Phát âm thanh
+        // Thuật toán ưu tiên tìm giọng tiếng Việt hay nhất
+        const vnVoice = availableVoices.find(v => v.name.includes('HoaiMy')) || // Top 1: Giọng Hoài My (Microsoft Edge)
+                        availableVoices.find(v => v.name.includes('Google') && v.lang.includes('vi')) || // Top 2: Google (Chrome)
+                        availableVoices.find(v => v.name.includes('Linh')) || // Top 3: Linh (Safari/macOS)
+                        availableVoices.find(v => v.lang === 'vi-VN' || v.lang === 'vi_VN' || v.lang.includes('vi')); // Mặc định bất kỳ giọng VN nào
+
+        if (vnVoice) {
+            utterance.voice = vnVoice;
+        }
+
         window.speechSynthesis.speak(utterance);
     }
 
