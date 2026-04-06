@@ -233,6 +233,48 @@ def chat():
 
     data = request.json
     user_message = data.get('message', '')
+    image_data = data.get('image', None) # Lấy dữ liệu ảnh nếu có
+
+    try:
+        # Cấu hình tính cách của LinLin
+        system_prompt = "Bạn là LinLin, trợ lý ảo thông minh của Học viện Kỹ thuật Mật mã (KMA). Khi được cung cấp hình ảnh đồ thị, hãy phân tích kỹ các đỉnh, các cạnh và suy luận logic để tìm ra sắc số (chromatic number) của đồ thị đó. Giải thích từng bước cho sinh viên dễ hiểu."
+        
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # Nếu người dùng gửi ảnh -> Dùng Model Vision
+        if image_data:
+            prompt_text = user_message if user_message else "Hãy phân tích đồ thị trong ảnh này và tìm sắc số (chromatic number) của nó."
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt_text},
+                    {"type": "image_url", "image_url": {"url": image_data}}
+                ]
+            })
+            # Sử dụng model hỗ trợ đọc ảnh của Groq
+            active_model = "llama-3.2-11b-vision-preview"
+            
+        # Nếu chỉ gửi text bình thường -> Dùng Model Text siêu tốc
+        else:
+            messages.append({
+                "role": "user",
+                "content": user_message
+            })
+            active_model = "llama-3.1-8b-instant"
+
+        # Gọi API
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model=active_model,
+        )
+        return jsonify({"answer": chat_completion.choices[0].message.content})
+        
+    except Exception as e:
+        print(f"Lỗi AI: {e}")
+        return jsonify({"answer": f"Xin lỗi, LinLin gặp lỗi khi xử lý: {str(e)}"}), 500
+
+    data = request.json
+    user_message = data.get('message', '')
     # TÍNH NĂNG 1: TRÍ NHỚ - Nhận lịch sử chat từ giao diện
     chat_history = data.get('history', []) 
 
