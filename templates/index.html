@@ -1517,19 +1517,29 @@ input#vertices {
 <div id="chatbot-wrapper">
     <div id="chat-box" class="chat-hidden">
         <div class="chat-header">
-            <span>🤖 Lavie-Trợ lý ảo KMA</span>
+            <span>🤖 LinLin - Trợ lý KMA</span>
             <button onclick="toggleChat()">&times;</button>
         </div>
         <div id="chat-content">
-            <div class="msg bot-msg">Chào <strong>{{ user }}</strong>! Mình là AI của KMA. Bạn cần mình giúp gì hôm nay?</div>
+            <div class="msg bot-msg">Chào <strong>{{ user }}</strong>! Gửi ảnh đồ thị hoặc nhắn tin để LinLin giúp bạn nhé!</div>
         </div>
         <div class="chat-input-area">
-            <input type="text" id="user-msg" placeholder="Hỏi gì đó..." onkeypress="if(event.key === 'Enter') sendMessage()">
-            <button onclick="sendMessage()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            <!-- Nút chọn ảnh -->
+            <input type="file" id="image-input" accept="image/*" style="display: none;">
+            <button type="button" onclick="document.getElementById('image-input').click()" class="icon-btn" title="Gửi ảnh đồ thị">
+                📷
             </button>
+
+            <!-- Ô nhập tin nhắn duy nhất -->
+            <input type="text" id="user-msg" placeholder="Hỏi LinLin hoặc dán ảnh..." onkeypress="if(event.key === 'Enter') sendMessage()">
             
+            <!-- Nút gửi -->
+            <button onclick="sendMessage()" class="send-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
         </div>
+        <!-- Hiển thị tên file đã chọn (nếu có) -->
+        <div id="file-preview" style="font-size: 11px; color: #f39c12; padding: 0 15px 5px; display: none;"></div>
     </div>
     <div id="chat-circle" onclick="toggleChat()">
         <span>💬</span>
@@ -1537,30 +1547,28 @@ input#vertices {
 </div>
 
 
-
 <script>
-    // 0. Khởi tạo
+    // 0. Khởi tạo bộ nhớ và biến ảnh
     let chatHistory = [];
-    let currentImageBase64 = null; // Lưu trữ ảnh tạm thời
+    let currentImageBase64 = null;
 
-    // 1. Lắng nghe sự kiện chọn file (Thêm mới)
-    // Bạn cần đảm bảo có thẻ <input type="file" id="image-input"> trong HTML
-    document.addEventListener('change', function(e) {
-        if (e.target && e.target.id === 'image-input') {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    currentImageBase64 = event.target.result;
-                    // Thông báo cho người dùng đã chọn ảnh
-                    appendMessage("📷 Đã chọn ảnh: " + file.name, 'user-msg');
-                };
-                reader.readAsDataURL(file);
-            }
+    // 1. Xử lý khi người dùng chọn ảnh
+    document.getElementById('image-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('file-preview');
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                currentImageBase64 = event.target.result;
+                preview.innerText = "⭐ Đã đính kèm: " + file.name;
+                preview.style.display = "block";
+            };
+            reader.readAsDataURL(file);
         }
     });
 
-    // 2. Hàm ẩn hiện khung chat (Giữ nguyên)
+    // 2. Ẩn hiện khung chat
     function toggleChat() {
         const chatBox = document.getElementById('chat-box');
         chatBox.classList.toggle('chat-hidden');
@@ -1569,21 +1577,27 @@ input#vertices {
         }
     }
 
-    // 3. Hàm gửi tin nhắn (Đã nâng cấp Vision)
+    // 3. Hàm gửi tin nhắn và ảnh
     async function sendMessage() {
         const input = document.getElementById('user-msg');
+        const preview = document.getElementById('file-preview');
         const message = input.value.trim();
         
-        // Nếu không có cả chữ lẫn ảnh thì không gửi
         if (!message && !currentImageBase64) return;
 
-        // Hiển thị tin nhắn chữ của người dùng (nếu có)
-        if (message) appendMessage(message, 'user-msg');
-        input.value = '';
+        // Hiển thị nội dung người dùng gửi
+        if (currentImageBase64) {
+            appendMessage(message ? "📷 [Ảnh]: " + message : "📷 Đang phân tích đồ thị...", 'user-msg');
+        } else {
+            appendMessage(message, 'user-msg');
+        }
 
-        // Hiển thị trạng thái chờ
+        input.value = '';
+        preview.style.display = "none";
+
+        // Hiển thị loading
         const tempId = 'loading-' + Date.now();
-        appendMessage('LinLin đang phân tích...', 'bot-msg', tempId);
+        appendMessage('LinLin đang suy nghĩ...', 'bot-msg', tempId);
 
         try {
             const response = await fetch('/chat', {
@@ -1591,7 +1605,7 @@ input#vertices {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     message: message,
-                    image: currentImageBase64, // Gửi ảnh Base64 lên server
+                    image: currentImageBase64, // Gửi ảnh Base64
                     history: chatHistory 
                 })
             });
@@ -1602,30 +1616,25 @@ input#vertices {
             if (data.answer) {
                 loadingMsg.innerText = data.answer;
 
-                // Cập nhật trí nhớ (Chỉ lưu tin nhắn chữ)
-                if (message) {
-                    chatHistory.push({ "role": "user", "content": message });
-                    chatHistory.push({ "role": "assistant", "content": data.answer });
-                }
+                // Cập nhật trí nhớ (Lưu text để AI nhớ ngữ cảnh)
+                chatHistory.push({ "role": "user", "content": message || "Gửi ảnh đồ thị" });
+                chatHistory.push({ "role": "assistant", "content": data.answer });
 
-                if (chatHistory.length > 8) {
-                    chatHistory = chatHistory.slice(chatHistory.length - 8);
-                }
+                if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
             } else {
-                loadingMsg.innerText = "Xin lỗi, LinLin không nhận diện được đồ thị này.";
+                loadingMsg.innerText = "LinLin gặp lỗi rồi, bạn thử lại nhé!";
             }
         } catch (error) {
             console.error("Lỗi:", error);
-            document.getElementById(tempId).innerText = "Lỗi kết nối Vision. Bạn thử lại nhé!";
+            document.getElementById(tempId).innerText = "Lỗi kết nối server!";
         } finally {
-            // Xóa dữ liệu ảnh sau khi gửi xong để lần sau gửi ảnh mới
+            // Reset ảnh sau khi gửi
             currentImageBase64 = null;
-            const fileInput = document.getElementById('image-input');
-            if (fileInput) fileInput.value = ''; 
+            document.getElementById('image-input').value = '';
         }
     }
 
-    // 4. Hàm tạo phần tử tin nhắn (Giữ nguyên)
+    // 4. Hàm vẽ tin nhắn lên màn hình
     function appendMessage(text, className, id = null) {
         const content = document.getElementById('chat-content');
         const msgDiv = document.createElement('div');
