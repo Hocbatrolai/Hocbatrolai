@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Flappy Bird - Con gà đi học</title>
+    <style>
+        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #000; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { border: 5px solid #222; background-color: #71C5CF; box-shadow: 0 0 80px rgba(0,0,0,1); }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // --- CẤU HÌNH ---
+    const SCREEN_WIDTH = 1024;
+    const SCREEN_HEIGHT = 480; 
+    const GRAVITY = 0.08; 
+    const BIRD_JUMP = -3; 
+    const FLOOR_HEIGHT = 15;
+
+    // Tốc độ cơ bản và biến lưu trữ tốc độ thực tế
+    const BASE_PIPE_SPEED = 1.2;
+    let currentPipeSpeed = BASE_PIPE_SPEED;
+
+    const BG_URL = "chim.png"; 
+    const backgroundImg = new Image();
+    backgroundImg.src = BG_URL;
+
+    const COLOR_SKY = "#71C5CF";
+    const COLOR_BIRD = "#FCD740";
+    const COLOR_GROUND = "#C8BE8C";
+    const COLOR_RED = "red"; // Màu mới cho text
+    const COLOR_KMA_RED = "#FF3D3D"; // Đỏ KMA cho logo và text Game Over
+
+    canvas.width = SCREEN_WIDTH;
+    canvas.height = SCREEN_HEIGHT;
+
+    // Thay thế goodTimer bằng textTimer và thêm biến currentText
+    let birdY, birdVel, birdTilt, score, gameActive, pipes, floorX, textTimer, currentText;
+
+    function resetGame() {
+        birdY = SCREEN_HEIGHT / 2;
+        birdVel = 0;
+        birdTilt = 0;
+        score = 0;
+        currentPipeSpeed = BASE_PIPE_SPEED;
+        pipes = [createPipe(SCREEN_WIDTH + 100)];
+        floorX = 0;
+        textTimer = 0;
+        currentText = "";
+        gameActive = true;
+    }
+
+    function createPipe(x) {
+        const randomGap = Math.floor(Math.random() * 41) + 140; 
+        return {
+            x: x,
+            gap: randomGap,
+            height: Math.floor(Math.random() * (SCREEN_HEIGHT - randomGap - 120)) + 50,
+            passed: false,
+            width: 75,
+            nextDist: Math.floor(Math.random() * 151) + 350 
+        };
+    }
+
+    // --- VẼ CON CHIM VÀ MŨ (ĐÃ SỬA) ---
+    function drawBird() {
+        ctx.save();
+        ctx.translate(150, birdY);
+        birdTilt = birdVel < 0 ? 25 : Math.max(-70, birdTilt - 5);
+        ctx.rotate(-birdTilt * Math.PI / 180);
+
+        // Vẽ cơ thể con chim
+        let birdGrad = ctx.createRadialGradient(-5, -5, 2, 0, 0, 15);
+        birdGrad.addColorStop(0, "#FFF7AD"); 
+        birdGrad.addColorStop(1, COLOR_BIRD);
+        ctx.fillStyle = birdGrad;
+        ctx.beginPath(); ctx.ellipse(0, 0, 16, 13, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(9, -4, 4.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(11, -4, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#FF6400";
+        ctx.beginPath(); ctx.moveTo(13, 2); ctx.lineTo(23, 4); ctx.lineTo(13, 8); ctx.fill();
+
+        // Vẽ Mũ Lưỡi Trai KMA (Thay thế nón tốt nghiệp)
+        ctx.save();
+        ctx.translate(0, -18); // Di chuyển mũ lên trên
+        ctx.rotate(0); // Không xoay mũ theo chim để logo KMA rõ ràng hơn
+
+        // Vẽ thân nón baseball (màu đỏ)
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.moveTo(-16, 0); // Phía sau nón
+        ctx.lineTo(0, 0);
+        ctx.bezierCurveTo(4, -12, 12, -12, 16, 0); // Chóp nón
+        ctx.lineTo(26, 0); // Vành nón
+        ctx.bezierCurveTo(24, 4, 18, 4, 16, 0); // Cuối vành
+        ctx.lineTo(-16, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Vẽ Logo KMA nhỏ (khiên)
+        ctx.fillStyle = "#800000"; // Đỏ đậm hơn cho logo nổi bật
+        ctx.beginPath();
+        ctx.moveTo(8, -10); // Vị trí logo
+        ctx.lineTo(14, -10);
+        ctx.lineTo(14, -4);
+        ctx.lineTo(11, -2);
+        ctx.lineTo(8, -4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Vẽ chữ KMA nhỏ (màu trắng)
+        ctx.fillStyle = "white";
+        ctx.font = "bold 8px 'Segoe UI'";
+        ctx.textAlign = "center";
+        ctx.fillText("KMA", 11, -6); // Căn chỉnh chữ
+
+        ctx.restore(); // Kết thúc phần vẽ mũ
+
+        ctx.restore(); // Kết thúc phần vẽ chim
+    }
+
+    function drawPipes() {
+        pipes.forEach(p => {
+            const drawPart = (y, h, isTop) => {
+                let pipeGrad = ctx.createLinearGradient(p.x, 0, p.x + p.width, 0);
+                pipeGrad.addColorStop(0, "#1a6b1a");
+                pipeGrad.addColorStop(0.2, "#34b334"); 
+                pipeGrad.addColorStop(0.25, "#98fb98"); 
+                pipeGrad.addColorStop(0.4, "#34b334");
+                pipeGrad.addColorStop(1, "#0d3d0d");
+                ctx.fillStyle = pipeGrad;
+                ctx.globalAlpha = 0.9; 
+                ctx.fillRect(p.x, y, p.width, h);
+                ctx.globalAlpha = 1.0;
+                ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(p.x, y, p.width, h);
+                let capY = isTop ? y + h - 22 : y;
+                ctx.fillStyle = pipeGrad;
+                ctx.fillRect(p.x - 6, capY, p.width + 12, 22);
+                ctx.strokeRect(p.x - 6, capY, p.width + 12, 22);
+            };
+            drawPart(0, p.height, true);
+            let lowerY = p.height + p.gap;
+            drawPart(lowerY, SCREEN_HEIGHT - lowerY - FLOOR_HEIGHT, false);
+        });
+    }
+
+    function drawGameTitle() {
+        const title = "Con gà đi học";
+        ctx.save();
+        ctx.font = "bold 22px 'Segoe UI'";
+        
+        const posX = 80; 
+        const posY = SCREEN_HEIGHT - 30;
+
+        ctx.fillStyle = "red"; // Đổi màu thành đỏ và nhỏ hơn
+        ctx.shadowBlur = 0; // Bỏ bóng cũ
+        ctx.fillText(title, posX, posY);
+        ctx.restore();
+    }
+
+    function update() {
+        if (!gameActive) return;
+        birdVel += GRAVITY;
+        birdY += birdVel;
+        
+        floorX = (floorX - currentPipeSpeed) % SCREEN_WIDTH;
+        
+        pipes.forEach(p => {
+            p.x -= currentPipeSpeed;
+            if (150 + 8 > p.x && 150 - 8 < p.x + p.width) {
+                if (birdY - 7 < p.height || birdY + 7 > p.height + p.gap) gameActive = false;
+            }
+            if (!p.passed && p.x + p.width < 150) {
+                score++; 
+                p.passed = true;
+                
+                // TĂNG TỐC ĐỘ: Mỗi 5 điểm tăng tốc độ thêm 0.15
+                if (score % 5 === 0) {
+                    currentPipeSpeed += 0.15;
+                }
+
+                // --- XỬ LÝ HIỆU ỨNG TEXT ĐIỂM SỐ (HELLO/GRADE) ---
+                textTimer = 100;
+                if (score === 1) {
+                    currentText = "Hello tân KMAer";
+                } else {
+                    const grades = ["A", "A+", "B+", "B", "C", "C+"];
+                    currentText = grades[Math.floor(Math.random() * grades.length)];
+                }
+            }
+        });
+        
+        if (pipes[pipes.length - 1].x < SCREEN_WIDTH - pipes[pipes.length - 1].nextDist) {
+            pipes.push(createPipe(SCREEN_WIDTH));
+        }
+        if (pipes[0].x < -100) pipes.shift();
+        if (birdY >= SCREEN_HEIGHT - FLOOR_HEIGHT - 12 || birdY <= 0) gameActive = false;
+        
+        // Cập nhật timer cho text
+        if (textTimer > 0) textTimer--;
+    }
+
+    function render() {
+        ctx.fillStyle = COLOR_SKY;
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        if (backgroundImg.complete) {
+            ctx.drawImage(backgroundImg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        }
+
+        drawPipes();
+        ctx.fillStyle = COLOR_GROUND;
+        ctx.fillRect(floorX, SCREEN_HEIGHT - FLOOR_HEIGHT, SCREEN_WIDTH*2, FLOOR_HEIGHT);
+        drawBird();
+        
+        drawGameTitle();
+
+        // --- SCORE (ĐÃ SỬA THÀNH SỐ TÍN TÍCH LŨY) ---
+        ctx.save();
+        let scoreX = 145; 
+        let scoreY = 55; 
+        
+        ctx.font = "bold 28px 'Segoe UI', sans-serif"; // Đổi sang Segoe UI, nhỏ hơn
+        ctx.shadowBlur = 0; // Bỏ bóng cũ
+        ctx.fillStyle = COLOR_RED; // Màu đỏ mới
+        ctx.textAlign = "center";
+        ctx.fillText(`Số tín tích lũy: ${score}`, scoreX, scoreY);
+        ctx.restore();
+
+        // --- HIỆN THỊ TEXT HIỆU ỨNG TÙY CHỈNH (HELLO/GRADE) (ĐÃ SỬA THÀNH ĐỎ VÀ NHỎ HƠN) ---
+        if (textTimer > 0) {
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.font = "bold 28px 'Segoe UI', sans-serif"; // Giảm kích thước, font đậm
+            // ctx.shadowBlur = 20; // Bỏ bóng cũ
+            // ctx.shadowColor = "#FFD700"; // Bỏ màu bóng cũ
+            ctx.globalAlpha = textTimer / 100;
+            // ctx.strokeStyle = "#B8860B"; // Bỏ viền cũ
+            // ctx.lineWidth = 6; // Bỏ độ dày viền cũ
+            // ctx.strokeText(currentText, SCREEN_WIDTH / 2, 110); // Bỏ vẽ viền
+            ctx.fillStyle = "red"; // Đổi màu fill thành đỏ
+            ctx.fillText(currentText, SCREEN_WIDTH / 2, 110);
+            ctx.restore();
+        }
+
+        if (!gameActive) {
+            ctx.fillStyle = "rgba(0,0,0,0.75)";
+            ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+            ctx.textAlign = "center";
+            
+            // Xử lý màn hình Start (chỉ hiển thị khi score = 0 và chưa có hiệu ứng text)
+            if (score === 0 && textTimer === 0) {
+                ctx.fillStyle = "#FFF";
+                ctx.font = "bold 40px 'Segoe UI'";
+                ctx.fillText("NHẤN SPACE ĐỂ BẮT ĐẦU", SCREEN_WIDTH/2, SCREEN_HEIGHT/2);
+            } else {
+                ctx.fillStyle = COLOR_KMA_RED; // Đỏ KMA
+                ctx.font = "bold 60px 'Arial Black'";
+                ctx.shadowBlur = 0; // Bỏ bóng cũ
+                ctx.shadowColor = "red";
+                ctx.fillText("GAME OVER", SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 60);
+                
+                ctx.fillStyle = COLOR_RED; // Đỏ và nhỏ hơn
+                ctx.font = "bold 28px 'Segoe UI'";
+                ctx.fillText(`Số tín tích lũy: ${score}`, SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 10);
+
+                // --- CẬP NHẬT DÒNG GAME OVER DÀNH CHO KMAer (MÀU ĐỎ VÀ NHỎ HƠN) ---
+                const msg = "Đúng là con gà KMA! Học lại em nhé";
+                ctx.font = "italic bold 28px 'Segoe UI'";
+                let msgWidth = ctx.measureText(msg).width;
+                
+                ctx.fillStyle = "rgba(255, 0, 0, 0.1)"; // Nền đỏ mờ hơn
+                ctx.beginPath();
+                ctx.roundRect(SCREEN_WIDTH/2 - msgWidth/2 - 20, SCREEN_HEIGHT/2 + 25, msgWidth + 40, 50, 10);
+                ctx.fill();
+                ctx.strokeStyle = "red"; // Viền đỏ nhỏ hơn
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = "#FF5555"; // Đỏ hồng
+                ctx.fillText(msg, SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 60);
+                
+                ctx.font = "bold 18px 'Segoe UI'"; // Đỏ và nhỏ hơn
+                ctx.fillStyle = COLOR_RED;
+                ctx.fillText("Nhấn Space để thử lại", SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 110);
+            }
+        }
+        update();
+        requestAnimationFrame(render);
+    }
+
+    const input = (e) => { if (e.type === "mousedown" || (e.type === "keydown" && e.code === "Space")) { if (!gameActive) resetGame(); birdVel = BIRD_JUMP; } };
+    window.addEventListener("keydown", input);
+    window.addEventListener("mousedown", input);
+    resetGame(); gameActive = false; render();
+</script>
+</body>
+</html>
