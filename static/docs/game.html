@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTP - Earth Blue & Red Engine (Audio Update)</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
+        
+        #code-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; align-items: center; padding-left: 5%; }
+        .code-block { color: #4ed9ff; font-size: 13px; line-height: 1.6; text-shadow: 0 0 10px rgba(78,217,255,0.6); animation: float 8s infinite ease-in-out; }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        
+        #hud { position: absolute; bottom: 30px; right: 30px; color: #fff; border-left: 2px solid #ff4400; padding-left: 15px; font-size: 11px; text-transform: uppercase; z-index: 20;}
+
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+        
+        #movement-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: grid;
+            grid-template-areas: 
+                ". up ."
+                "left . right"
+                ". down .";
+            gap: 5px;
+            z-index: 100;
+        }
+
+        .launch-btn {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #ff4400;
+            color: #ff4400;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.3s;
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+        }
+        .launch-btn:hover { background: #ff4400; color: #000; box-shadow: 0 0 20px #ff4400; }
+        .launch-btn:active { transform: scale(0.9); }
+
+        .move-btn {
+            width: 50px;
+            height: 40px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            clip-path: none; 
+            border-radius: 4px;
+        }
+
+        #btn-up { grid-area: up; }
+        #btn-down { grid-area: down; }
+        #btn-left { grid-area: left; }
+        #btn-right { grid-area: right; }
+
+        #btn-nitro { border-color: #4ed9ff; color: #4ed9ff; }
+        #btn-nitro:hover { background: #4ed9ff; color: #000; box-shadow: 0 0 20px #4ed9ff; }
+        #btn-hyper { border-color: #ae81ff; color: #ae81ff; }
+        #btn-hyper:hover { background: #ae81ff; color: #000; box-shadow: 0 0 20px #ae81ff; }
+
+        #energy-chart {
+            position: absolute;
+            bottom: 100px;
+            right: 30px;
+            width: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 68, 0, 0.3);
+            padding: 10px;
+            z-index: 20;
+        }
+        .energy-bar-wrapper { margin-bottom: 8px; }
+        .label { color: #4ed9ff; font-size: 9px; margin-bottom: 3px; display: block; }
+        .bar-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.1s ease; }
+        #fill-thrust { background: #ff4400; box-shadow: 0 0 8px #ff4400; }
+        #fill-plasma { background: #4ed9ff; box-shadow: 0 0 8px #4ed9ff; }
+        #fill-shield { background: #ae81ff; box-shadow: 0 0 8px #ae81ff; }
+
+        #minimap-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 160px;
+            height: 160px;
+            background: rgba(0, 20, 30, 0.7);
+            border: 1px solid #4ed9ff;
+            border-radius: 50%;
+            z-index: 100;
+            box-shadow: 0 0 20px rgba(78, 217, 255, 0.2);
+        }
+        #radar-sweep {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent, rgba(78, 217, 255, 0.3));
+            animation: sweep 4s linear infinite;
+        }
+        .radar-grid {
+            position: absolute;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            border: 1px solid rgba(78, 217, 255, 0.1);
+            background-image: 
+                radial-gradient(circle, transparent 30%, rgba(78, 217, 255, 0.05) 31%, transparent 32%),
+                radial-gradient(circle, transparent 60%, rgba(78, 217, 255, 0.05) 61%, transparent 62%);
+        }
+        .map-dot {
+            position: absolute;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s linear;
+        }
+        #dot-earth { width: 10px; height: 10px; background: #4ed9ff; box-shadow: 0 0 10px #4ed9ff; top: 50%; left: 50%; }
+        #dot-ship { width: 5px; height: 5px; background: #ff4400; box-shadow: 0 0 8px #ff4400; z-index: 101; }
+        
+        #boom-label {
+            position: absolute;
+            color: #ffcc00;
+            font-size: 60px;
+            font-weight: 900;
+            text-shadow: 0 0 20px #ff4400, 0 0 40px #ff0000;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+            transform: translate(-50%, -50%);
+            animation: boom-anim 0.5s ease-out forwards;
+        }
+
+        @keyframes boom-anim {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+        }
+
+        @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div id="boom-label">BOOM!</div>
+
+<div id="controls">
+    <button class="launch-btn" onclick="setEngine(0.65, 1)">NORMAL</button>
+    <button class="launch-btn" id="btn-nitro" onclick="setEngine(1.5, 2.5)">NITRO BOOST</button>
+    <button class="launch-btn" id="btn-hyper" onclick="setEngine(4.0, 5)">HYPER DRIVE</button>
+</div>
+
+<div id="movement-controls">
+    <button class="launch-btn move-btn" id="btn-up">▲</button>
+    <button class="launch-btn move-btn" id="btn-left">◀</button>
+    <button class="launch-btn move-btn" id="btn-right">▶</button>
+    <button class="launch-btn move-btn" id="btn-down">▼</button>
+</div>
+
+<div id="minimap-container">
+    <div class="radar-grid"></div>
+    <div id="radar-sweep"></div>
+    <div class="map-dot" id="dot-earth"></div>
+    <div class="map-dot" id="dot-ship"></div>
+</div>
+
+<div id="energy-chart">
+    <div class="energy-bar-wrapper">
+        <span class="label">THRUST POWER</span>
+        <div class="bar-container"><div id="fill-thrust" class="bar-fill"></div></div>
+    </div>
+    <div class="energy-bar-wrapper">
+        <span class="label">PLASMA CORE</span>
+        <div class="bar-container"><div id="fill-plasma" class="bar-fill"></div></div>
+    </div>
+    <div class="energy-bar-wrapper">
+        <span class="label">SHIELD INTEGRITY</span>
+        <div class="bar-container"><div id="fill-shield" class="bar-fill"></div></div>
+    </div>
+</div>
+
+<div id="code-overlay">
+    <div class="code-block">
+        <span style="color: #75715e;">// Xin chào, mình là phi hành gia Nguyễn Bá Sáng</span><br>
+        <span style="color: #d17cc4;">Cùng ngắm trái đất với mình nhé!</span> {<br>
+        &nbsp;&nbsp;h: <span style="color: #a6e22e;">strong</span>;<br>
+        &nbsp;&nbsp;n: <span style="color: #f92672;">none</span>;<br>
+        &nbsp;&nbsp;i: <span style="color: #ae81ff;">active</span>;<br>
+        &nbsp;&nbsp;l: <span style="color: #81ff8e;">active</span>;<br>
+        <br>
+        <span style="color: #4ed9ff;">Atmosphere: CYAN_BLUE</span> | <span style="color: #ff4400;">Engine: RED_FIRE</span> {<br>
+        &nbsp;&nbsp;earth_size: <span style="color: #a6e22e;">giant_25</span>;<br>
+        &nbsp;&nbsp;engine_mode: <span style="color: #f92672;">burning_red</span>;<br>
+        &nbsp;&nbsp;status: <span style="color: #ae81ff;">perfect_contrast</span>;<br>
+        &nbsp;&nbsp;}<br>
+        <br>
+        <span style="color: #d17cc4;">weather:</span> {<br>
+        &nbsp;&nbsp;condition: <span style="color: #a6e22e;">clear_sky</span>;<br>
+        &nbsp;&nbsp;temperature: <span style="color: #f92672;">optimal</span>;<br>
+        &nbsp;&nbsp;visibility: <span style="color: #4ed9ff;">high_definition</span>;<br>
+        &nbsp;&nbsp;},<br>
+        <span style="color: #f8f8f2;">command_log:</span> <span style="color: #e6db74;">"initializing_focus_sequence"</span>;<br>
+        <span style="color: #f8f8f2;">safety_check:</span> <span style="color: #f92672;">PASS</span>;<br>
+        <span style="color: #75715e;">// All systems ready, have a good day!.</span><br>
+        <span style="color: #66d9ef;">System.wait</span>(<span style="color: #e6db74;">"user_confirmation"</span>);<br>
+        <span style="color: #4ed9ff;">MissionStatus.set</span>(<span style="color: #f92672;">INITIALIZING</span>);
+    </div>
+</div>
+
+<div id="hud">
+    System Status: Hybrid Energy<br>
+    Object: Blue Giant x Red Flame<br>
+    Co_Truong: GALAXY_CT090338
+</div>
+
+<script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.156.1/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.156.1/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+let scene, camera, renderer, controls;
+let earth, cloud, starField, galaxy, spaceship, asteroids;
+let flame, flameCore, glow, engineLight;
+let dotShip = document.getElementById('dot-ship');
+let boomLabel = document.getElementById('boom-label');
+
+// Khởi tạo Audio Context
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// Hàm tạo âm thanh nổ kỹ thuật số
+function playExplosionSound() {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const duration = 1.5;
+    const sampleRate = audioCtx.sampleRate;
+    const bufferSize = sampleRate * duration;
+    const buffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Tạo Noise trắng (âm thanh xè xè của vụ nổ)
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = buffer;
+
+    // Bộ lọc âm trầm để tiếng nổ nặng hơn
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + duration);
+
+    // Điều khiển âm lượng (nhỏ dần)
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+
+    noiseSource.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    // Thêm tiếng "thump" trầm từ sóng Sine
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.2);
+    
+    oscGain.gain.setValueAtTime(0.7, audioCtx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+    osc.connect(oscGain);
+    oscGain.connect(audioCtx.destination);
+
+    noiseSource.start();
+    osc.start();
+    noiseSource.stop(audioCtx.currentTime + duration);
+    osc.stop(audioCtx.currentTime + 0.3);
+}
+
+let explosionParticles = [];
+const PARTICLE_COUNT = 40;
+
+const moveState = { up: false, down: false, left: false, right: false };
+const moveSpeed = 0.5;
+window.engineSpeed = 0.65;
+window.flameScaleBase = 1;
+
+window.setEngine = function(speed, flameScale) {
+    window.engineSpeed = speed;
+    window.flameScaleBase = flameScale;
+};
+
+const setupMoveBtn = (id, direction) => {
+    const btn = document.getElementById(id);
+    btn.addEventListener('mousedown', () => moveState[direction] = true);
+    btn.addEventListener('mouseup', () => moveState[direction] = false);
+    btn.addEventListener('mouseleave', () => moveState[direction] = false);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); moveState[direction] = true; });
+    btn.addEventListener('touchend', () => moveState[direction] = false);
+};
+
+const barThrust = document.getElementById('fill-thrust');
+const barPlasma = document.getElementById('fill-plasma');
+const barShield = document.getElementById('fill-shield');
+
+init();
+animate();
+
+function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 2000);
+    camera.position.set(0, 30, 125);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    const loader = new THREE.TextureLoader();
+
+    // 🌍 TRÁI ĐẤT
+    const earthRadius = 25;
+    const earthGeo = new THREE.SphereGeometry(earthRadius, 64, 64);
+    const earthMat = new THREE.MeshStandardMaterial({
+        map: loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg'),
+        bumpMap: loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg'),
+        bumpScale: 0.5
+    });
+    earth = new THREE.Mesh(earthGeo, earthMat);
+    scene.add(earth);
+
+    // ☁️ KHÍ QUYỂN
+    cloud = new THREE.Mesh(
+        new THREE.SphereGeometry(earthRadius + 0.6, 64, 64),
+        new THREE.MeshPhongMaterial({
+            map: loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png'),
+            transparent: true,
+            opacity: 0.45,
+            blending: THREE.AdditiveBlending
+        })
+    );
+    scene.add(cloud);
+
+    // ☄️ THIÊN THẠCH
+    asteroids = new THREE.Group();
+    const asteroidCount = 24;
+    const asteroidMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 });
+    for (let i = 0; i < asteroidCount; i++) {
+        const geom = new THREE.IcosahedronGeometry(1, 0);
+        const positionAttribute = geom.getAttribute('position');
+        for (let j = 0; j < positionAttribute.count; j++) {
+            const x = positionAttribute.getX(j);
+            const y = positionAttribute.getY(j);
+            const z = positionAttribute.getZ(j);
+            const offset = 0.8 + Math.random() * 0.4;
+            positionAttribute.setXYZ(j, x * offset, y * offset, z * offset);
+        }
+        const rock = new THREE.Mesh(geom, asteroidMat);
+        const s = 0.8 + Math.random() * 2.5;
+        rock.scale.set(s, s, s);
+        const dist = 60 + Math.random() * 90;
+        const angle = Math.random() * Math.PI * 2;
+        rock.position.set(Math.cos(angle)*dist, (Math.random()-0.5)*40, Math.sin(angle)*dist);
+        rock.userData.rotSpeed = (Math.random()-0.5)*0.02;
+        asteroids.add(rock);
+    }
+    scene.add(asteroids);
+
+    // ⭐ STAR FIELD
+    const starCount = 10000;
+    const starPos = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+        const r = 800 + Math.random()*400;
+        const theta = Math.random()*Math.PI*2;
+        const phi = Math.acos(2*Math.random()-1);
+        starPos[i*3] = r*Math.sin(phi)*Math.cos(theta);
+        starPos[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
+        starPos[i*3+2] = r*Math.cos(phi);
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+    starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.9 }));
+    scene.add(starField);
+
+    // 🌌 GALAXY
+    const particlesCount = 85000;
+    const positions = new Float32Array(particlesCount * 3);
+    const colors = new Float32Array(particlesCount * 3);
+    for (let i = 0; i < particlesCount; i++) {
+        const i3 = i * 3;
+        const radius = earthRadius + 10 + Math.random() * 110;
+        const spinAngle = radius * 0.12;
+        const branchAngle = (i % 3) * ((Math.PI * 2) / 3);
+        positions[i3] = Math.cos(branchAngle + spinAngle) * radius + (Math.random()-0.5)*10;
+        positions[i3 + 1] = (Math.random()-0.5)*10 - 8;
+        positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + (Math.random()-0.5)*10;
+        const mixedColor = new THREE.Color();
+        mixedColor.lerpColors(new THREE.Color(0x4ed9ff), new THREE.Color(0xd17cc4), Math.random());
+        colors[i3] = mixedColor.r; colors[i3+1] = mixedColor.g; colors[i3+2] = mixedColor.b;
+    }
+    const galaxyGeo = new THREE.BufferGeometry();
+    galaxyGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    galaxyGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    galaxy = new THREE.Points(galaxyGeo, new THREE.PointsMaterial({ size: 0.2, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
+    scene.add(galaxy);
+
+    // 🚀 PHI THUYỀN
+    spaceship = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1, 5, 32), new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9 }));
+    spaceship.add(body);
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.5, 32), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+    nose.position.y = 3.25;
+    spaceship.add(nose);
+
+    flame = new THREE.Mesh(new THREE.ConeGeometry(0.6, 7, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    flame.position.y = -6.5; flame.rotation.x = Math.PI;
+    spaceship.add(flame);
+
+    flameCore = new THREE.Mesh(new THREE.ConeGeometry(0.3, 4, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, blending: THREE.AdditiveBlending }));
+    flameCore.position.y = -5; flameCore.rotation.x = Math.PI;
+    spaceship.add(flameCore);
+
+    glow = new THREE.Mesh(new THREE.SphereGeometry(1.6, 24, 24), new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending }));
+    glow.position.y = -3.2;
+    spaceship.add(glow);
+
+    engineLight = new THREE.PointLight(0xff4400, 20, 50);
+    engineLight.position.y = -4;
+    spaceship.add(engineLight);
+
+    spaceship.rotation.z = -Math.PI / 2;
+    spaceship.position.set(-130, 25, 0);
+    scene.add(spaceship);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.8);
+    dirLight.position.set(60, 60, 60);
+    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0x444444));
+
+    setupMoveBtn('btn-up', 'up');
+    setupMoveBtn('btn-down', 'down');
+    setupMoveBtn('btn-left', 'left');
+    setupMoveBtn('btn-right', 'right');
+
+    window.addEventListener('resize', onWindowResize);
+}
+
+function createExplosion(pos) {
+    // PHÁT ÂM THANH
+    playExplosionSound();
+
+    const vector = pos.clone().project(camera);
+    const x = (vector.x * .5 + .5) * window.innerWidth;
+    const y = (-(vector.y * .5) + .5) * window.innerHeight;
+
+    boomLabel.style.left = `${x}px`;
+    boomLabel.style.top = `${y}px`;
+    boomLabel.style.display = 'block';
+
+    setTimeout(() => {
+        boomLabel.style.display = 'none';
+    }, 500);
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const geometry = new THREE.SphereGeometry(0.2 + Math.random() * 0.3, 8, 8);
+        const material = new THREE.MeshBasicMaterial({ 
+            color: new THREE.Color().setHSL(0.05 + Math.random() * 0.1, 1, 0.5),
+            transparent: true,
+            blending: THREE.AdditiveBlending
+        });
+        const p = new THREE.Mesh(geometry, material);
+        p.position.copy(pos);
+        
+        p.userData.velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 1.5,
+            (Math.random() - 0.5) * 1.5,
+            (Math.random() - 0.5) * 1.5
+        );
+        p.userData.life = 1.0;
+        
+        scene.add(p);
+        explosionParticles.push(p);
+    }
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    const time = performance.now();
+
+    earth.rotation.y += 0.0012;
+    cloud.rotation.y += 0.0016;
+    galaxy.rotation.y += 0.00025;
+    asteroids.rotation.y += 0.0005;
+
+    asteroids.children.forEach(rock => {
+        rock.rotation.x += rock.userData.rotSpeed;
+        rock.rotation.y += rock.userData.rotSpeed;
+    });
+
+    spaceship.position.x += window.engineSpeed;
+    if (moveState.up) spaceship.position.y += moveSpeed;
+    if (moveState.down) spaceship.position.y -= moveSpeed;
+    if (moveState.left) spaceship.position.z -= moveSpeed;
+    if (moveState.right) spaceship.position.z += moveSpeed;
+    spaceship.position.y += Math.sin(time * 0.006) * 0.02;
+
+    const distToEarth = spaceship.position.distanceTo(earth.position);
+    if (distToEarth < 26) { 
+        createExplosion(spaceship.position.clone());
+        spaceship.position.set(-160, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 20);
+    }
+
+    if (spaceship.position.x > 160) {
+        spaceship.position.x = -160;
+        spaceship.position.y = (Math.random() - 0.5) * 60;
+    }
+
+    for (let i = explosionParticles.length - 1; i >= 0; i--) {
+        let p = explosionParticles[i];
+        p.position.add(p.userData.velocity);
+        p.userData.life -= 0.02;
+        p.material.opacity = p.userData.life;
+        p.scale.multiplyScalar(0.96);
+        
+        if (p.userData.life <= 0) {
+            scene.remove(p);
+            explosionParticles.splice(i, 1);
+        }
+    }
+
+    const flicker = Math.sin(time * 0.15);
+    flame.scale.y = (1.6 + flicker * 0.6) * window.flameScaleBase;
+    flameCore.scale.y = (1.2 + Math.cos(time * 0.2) * 0.4) * window.flameScaleBase;
+    glow.scale.setScalar((1.5 + flicker * 0.3) * (window.flameScaleBase * 0.8));
+    engineLight.intensity = (18 + flicker * 10) * window.flameScaleBase;
+
+    let thrustVal = (window.engineSpeed / 4) * 100;
+    barThrust.style.width = `${Math.min(thrustVal + flicker * 10, 100)}%`;
+    barPlasma.style.width = `${85 + Math.cos(time * 0.05) * 10}%`;
+    barShield.style.width = window.engineSpeed > 3 ? '70%' : '98%'; 
+
+    const mapSize = 160;
+    const radarRange = 200; 
+    let radarX = (spaceship.position.x / radarRange) * (mapSize / 2) + (mapSize / 2);
+    let radarY = (spaceship.position.z / radarRange) * (mapSize / 2) + (mapSize / 2);
+    dotShip.style.left = `${radarX}px`;
+    dotShip.style.top = `${radarY}px`;
+
+    controls.update();
+    renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
