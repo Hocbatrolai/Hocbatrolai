@@ -1516,9 +1516,13 @@ input#vertices {
     <!-- Chatbot UI -->
 <div id="chatbot-wrapper">
     <div id="chat-box" class="chat-hidden">
-        <div class="chat-header">
+       <div class="chat-header">
             <span>🤖 Lavie - Trợ lý ảo KMA</span>
-            <button onclick="toggleChat()">&times;</button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <!-- Nút bật/tắt giọng nói -->
+                <button id="btn-bot-voice" onclick="toggleBotVoice()" title="Bật/Tắt giọng đọc" style="font-size: 18px;">🔊</button>
+                <button onclick="toggleChat()">&times;</button>
+            </div>
         </div>
         <div id="chat-content">
             <div class="msg bot-msg">Chào <strong>{{ user }}</strong>! Gửi ảnh đồ thị hoặc nhắn tin để Lavie giúp bạn nhé!</div>
@@ -1551,7 +1555,40 @@ input#vertices {
     // 0. Khởi tạo bộ nhớ và biến ảnh
     let chatHistory = [];
     let currentImageBase64 = null;
+    let isBotVoiceEnabled = true; // Mặc định bật giọng nói
 
+    // --- HÀM MỚI: Bật tắt giọng nói ---
+    function toggleBotVoice() {
+        isBotVoiceEnabled = !isBotVoiceEnabled;
+        document.getElementById('btn-bot-voice').innerText = isBotVoiceEnabled ? "🔊" : "🔇";
+        if (!isBotVoiceEnabled) {
+            window.speechSynthesis.cancel(); // Tắt ngay lập tức nếu đang nói
+        }
+    }
+
+    // --- HÀM MỚI: Đọc văn bản bằng giọng "Chị Google" ---
+    function speakText(text) {
+        if (!isBotVoiceEnabled || !('speechSynthesis' in window)) return;
+
+        // Dừng câu nói trước đó nếu chưa nói xong
+        window.speechSynthesis.cancel();
+
+        // Lọc bỏ các ký tự đặc biệt (như Markdown **, *, #) để đọc mượt hơn
+        const cleanText = text.replace(/[*#]/g, '');
+
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'vi-VN'; // Ép trình duyệt dùng giọng tiếng Việt
+        utterance.rate = 1.0;     // Tốc độ đọc (1.0 là bình thường)
+        utterance.pitch = 1.0;    // Độ thanh của giọng
+
+        // Cố gắng tìm đích danh giọng "Google tiếng Việt" nếu trình duyệt có hỗ trợ
+        const voices = window.speechSynthesis.getVoices();
+        const vnVoice = voices.find(v => v.name.includes('Google') && v.lang.includes('vi'));
+        if (vnVoice) utterance.voice = vnVoice;
+
+        // Phát âm thanh
+        window.speechSynthesis.speak(utterance);
+    }
     // 1. Xử lý khi người dùng chọn ảnh
     document.getElementById('image-input').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -1578,6 +1615,47 @@ input#vertices {
     }
 
     // 3. Hàm gửi tin nhắn và ảnh
+   // 0. Khởi tạo bộ nhớ, biến ảnh và trạng thái giọng nói
+    let chatHistory = [];
+    let currentImageBase64 = null;
+    let isBotVoiceEnabled = true; // Mặc định bật giọng nói
+
+    // --- HÀM MỚI: Bật tắt giọng nói ---
+    function toggleBotVoice() {
+        isBotVoiceEnabled = !isBotVoiceEnabled;
+        document.getElementById('btn-bot-voice').innerText = isBotVoiceEnabled ? "🔊" : "🔇";
+        if (!isBotVoiceEnabled) {
+            window.speechSynthesis.cancel(); // Tắt ngay lập tức nếu đang nói
+        }
+    }
+
+    // --- HÀM MỚI: Đọc văn bản bằng giọng "Chị Google" ---
+    function speakText(text) {
+        if (!isBotVoiceEnabled || !('speechSynthesis' in window)) return;
+
+        // Dừng câu nói trước đó nếu chưa nói xong
+        window.speechSynthesis.cancel();
+
+        // Lọc bỏ các ký tự đặc biệt (như Markdown **, *, #) để đọc mượt hơn
+        const cleanText = text.replace(/[*#]/g, '');
+
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'vi-VN'; // Ép trình duyệt dùng giọng tiếng Việt
+        utterance.rate = 1.0;     // Tốc độ đọc (1.0 là bình thường)
+        utterance.pitch = 1.0;    // Độ thanh của giọng
+
+        // Cố gắng tìm đích danh giọng "Google tiếng Việt" nếu trình duyệt có hỗ trợ
+        const voices = window.speechSynthesis.getVoices();
+        const vnVoice = voices.find(v => v.name.includes('Google') && v.lang.includes('vi'));
+        if (vnVoice) utterance.voice = vnVoice;
+
+        // Phát âm thanh
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // ... (Giữ nguyên các đoạn code cũ của bạn như xử lý ảnh, ẩn hiện khung chat) ...
+
+    // 3. Hàm gửi tin nhắn và ảnh (CẬP NHẬT THÊM TÍNH NĂNG ĐỌC)
     async function sendMessage() {
         const input = document.getElementById('user-msg');
         const preview = document.getElementById('file-preview');
@@ -1605,7 +1683,7 @@ input#vertices {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     message: message,
-                    image: currentImageBase64, // Gửi ảnh Base64
+                    image: currentImageBase64,
                     history: chatHistory 
                 })
             });
@@ -1616,7 +1694,12 @@ input#vertices {
             if (data.answer) {
                 loadingMsg.innerText = data.answer;
 
-                // Cập nhật trí nhớ (Lưu text để AI nhớ ngữ cảnh)
+                // ==========================================
+                // GỌI HÀM ĐỌC GIỌNG NÓI Ở ĐÂY NÀY!
+                speakText(data.answer);
+                // ==========================================
+
+                // Cập nhật trí nhớ
                 chatHistory.push({ "role": "user", "content": message || "Gửi ảnh đồ thị" });
                 chatHistory.push({ "role": "assistant", "content": data.answer });
 
@@ -1628,12 +1711,12 @@ input#vertices {
             console.error("Lỗi:", error);
             document.getElementById(tempId).innerText = "Lỗi kết nối server!";
         } finally {
-            // Reset ảnh sau khi gửi
             currentImageBase64 = null;
             document.getElementById('image-input').value = '';
         }
     }
 
+    // (Giữ nguyên hàm appendMessage cũ của bạn)
     // 4. Hàm vẽ tin nhắn lên màn hình
     function appendMessage(text, className, id = null) {
         const content = document.getElementById('chat-content');
