@@ -130,7 +130,17 @@ def retrieve_kma_info(query, top_k=2):
             results.append(kma_knowledge_base[idx])
     
     return "\n".join(results)
-
+def search_internet(query, max_results=3):
+    """Hàm tự động lướt web tìm kiếm thông tin mới nhất"""
+    try:
+        results = DDGS().text(query, max_results=max_results)
+        if results:
+            snippets = [f"- {r['title']}: {r['body']}" for r in results]
+            return "\n".join(snippets)
+        return ""
+    except Exception as e:
+        print(f"Lỗi tìm kiếm Web: {e}")
+        return ""
 # ---------------------------------------------------------------------------
 # DATABASE & ROUTE GIAO DIỆN (Giữ nguyên như cũ)
 # ---------------------------------------------------------------------------
