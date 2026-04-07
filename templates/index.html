@@ -1702,6 +1702,7 @@ input#vertices {
 
     // --- HÀM: Đọc văn bản ---
   // --- HÀM: Đọc văn bản bằng giọng NỮ ---
+    // --- HÀM: Đọc văn bản (Thuật toán chọn giọng tối ưu nhất) ---
     function speakText(text) {
         if (!isBotVoiceEnabled || !('speechSynthesis' in window)) return;
 
@@ -1713,24 +1714,32 @@ input#vertices {
         const utterance = new SpeechSynthesisUtterance(cleanText);
         utterance.lang = 'vi-VN'; 
         utterance.rate = 1.05;    
-        utterance.pitch = 1.2; // Tăng pitch lên 1.2 giúp giọng có độ thanh cao hơn, giống nữ giới hơn
+        utterance.pitch = 1.2; // Ép giọng thanh hơn
 
-        if (availableVoices.length === 0) loadVoices();
+        // Lấy danh sách giọng
+        let voices = window.speechSynthesis.getVoices();
+        if (voices.length === 0 && availableVoices.length > 0) {
+            voices = availableVoices;
+        }
 
-        // 1. Lọc ra danh sách TẤT CẢ giọng tiếng Việt, nhưng LOẠI BỎ giọng Nam (Microsoft An)
-        const vietnameseVoices = availableVoices.filter(v => 
-            (v.lang === 'vi-VN' || v.lang === 'vi_VN' || v.lang.includes('vi')) && 
-            !v.name.includes('An') // Chặn đứng anh chàng "Microsoft An"
-        );
-
-        // 2. Tìm giọng Nữ xịn nhất trong danh sách vừa lọc
-        const vnVoice = vietnameseVoices.find(v => v.name.includes('Google')) || // Top 2 Nữ: Google (Chrome)
-                        vietnameseVoices.find(v => v.name.includes('HoaiMy')) || // Top 1 Nữ: Hoài My (Edge)
-                        vietnameseVoices.find(v => v.name.includes('Linh')) ||   // Top 3 Nữ: Linh (Mac/iOS)
-                        vietnameseVoices[0]; // Hoặc lấy giọng nữ bất kỳ còn lại
+        // BỘ LỌC TÌM GIỌNG NỮ ĐỈNH CAO:
+        // Ưu tiên 1: Nữ của Chrome (Google Tiếng Việt)
+        // Ưu tiên 2: Nữ của Edge (Microsoft HoaiMy Online)
+        // Ưu tiên 3: Nữ của MacOS/Safari (Linh)
+        // Ưu tiên 4: Bất kỳ giọng VN nào KHÔNG CÓ chữ An
+        // Đường cùng: Chấp nhận anh "Microsoft An" còn hơn là để máy đọc tiếng Anh lơ lớ.
+        
+        const vnVoice = voices.find(v => v.name === 'Google Tiếng Việt') || 
+                        voices.find(v => v.name.includes('HoaiMy')) || 
+                        voices.find(v => v.name.includes('Linh')) || 
+                        voices.find(v => v.lang.includes('vi') && !v.name.includes('An')) ||
+                        voices.find(v => v.lang.includes('vi')); 
 
         if (vnVoice) {
             utterance.voice = vnVoice;
+            console.log("🎤 Lavie đang dùng " + vnVoice.name + " để phát âm.");
+        } else {
+            console.log("⚠️ Không tìm thấy bất kỳ giọng tiếng Việt nào!");
         }
 
         window.speechSynthesis.speak(utterance);
