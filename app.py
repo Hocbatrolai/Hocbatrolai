@@ -18,7 +18,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'kma_secret_key_sieu_bao_mat')
 # CẤU HÌNH AI & RAG (TÍNH NĂNG 3: RETRIEVAL-AUGMENTED GENERATION)
 # ---------------------------------------------------------------------------
 GROQ_KEY = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
+client = Groq(GROQ_API_KEY.) if GROQ_KEY else None
 
 # Đây là Cơ sở dữ liệu tri thức giả lập (Bạn có thể thêm hàng trăm câu vào đây)
 # CƠ SỞ DỮ LIỆU TRI THỨC NỘI BỘ KMA (ĐÃ GỘP TẤT CẢ THÔNG TIN MỚI NHẤT)
@@ -128,7 +128,7 @@ kma_knowledge_base = [
     
     "Trang web (Website) trang chủ chính thức của Học viện Kỹ thuật Mật mã (KMA) có địa chỉ đường link là: https://actvn.edu.vn/",
     "Fanpage Facebook chính thức của Học viện Kỹ thuật Mật mã (KMA) dùng để cập nhật tin tức, sự kiện và thông báo có đường link là: https://www.facebook.com/hocvienkythuatmatma",
-    "Cổng thông tin đào tạo (Trang quản lý sinh viên KMA) dùng để xem lịch học, thời khóa biểu, đăng ký tín chỉ và xem điểm có địa chỉ đường link là: https://ktdbcl.actvn.edu.vn/dang-nhap.html).",
+    "Cổng thông tin đào tạo (Trang quản lý sinh viên KMA) dùng để xem lịch học, thời khóa biểu, đăng ký tín chỉ và xem điểm có địa chỉ đường link là: https://ktdbcl.actvn.edu.vn/dang-nhap.html)",
     "Kênh YouTube chính thức của Học viện Kỹ thuật Mật mã (KMA) cung cấp các video sự kiện, giới thiệu và bài giảng có đường link là: https://www.youtube.com/channel/UCXy1Pqmu4v_5DTfL8pIVfkw/featured"
 ]
 
@@ -151,10 +151,12 @@ def retrieve_kma_info(query, top_k=2):
 def search_internet(query, max_results=3):
     """Hàm tự động lướt web tìm kiếm thông tin mới nhất"""
     try:
-        results = DDGS().text(query, max_results=max_results)
-        if results:
-            snippets = [f"- {r['title']}: {r['body']}" for r in results]
-            return "\n".join(snippets)
+        # Cách gọi mới nhất của thư viện DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results))
+            if results:
+                snippets = [f"- {r['title']}: {r['body']}" for r in results]
+                return "\n".join(snippets)
         return ""
     except Exception as e:
         print(f"Lỗi tìm kiếm Web: {e}")
