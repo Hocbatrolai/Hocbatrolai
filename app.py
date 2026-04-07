@@ -1,181 +1,89 @@
-import os
-import psycopg2
-import datetime
-import numpy as np
-from groq import Groq
-from psycopg2 import IntegrityError
-from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from duckduckgo_search import DDGS  
-
-app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'kma_secret_key_sieu_bao_mat')
-
 # ---------------------------------------------------------------------------
-# 1. CẤU HÌNH AI & RAG
+# ROUTE CHATBOT AI ĐÃ NÂNG CẤP (GỘP CHUNG VISION, RAG VÀ TRÍ NHỚ)
 # ---------------------------------------------------------------------------
-GROQ_KEY = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
-
-kma_knowledge_base = [
-    "Tên gọi: Học viện Kỹ thuật Mật mã có tên tiếng Anh là Vietnam Academy of Cryptography Techniques (hoặc Academy of Cryptography Techniques), mã trường là KMA.",
-    "Cơ quan chủ quản: Học viện Kỹ thuật Mật mã (KMA) trực thuộc Ban Cơ yếu Chính phủ của Bộ Quốc phòng.",
-    "Ngày truyền thống: Ngày truyền thống của Học viện Kỹ thuật Mật mã (KMA) là ngày 15/4/1976.",
-    "Lịch sử thành lập: Tên gọi Trường Đại học Kỹ thuật Mật mã bắt đầu được sử dụng từ ngày 5/6/1985.",
-    "Lịch sử thành lập: Tên gọi Học viện Kỹ thuật Mật mã (KMA) chính thức bắt đầu từ tháng 2 năm 1995 trên cơ sở sáp nhập Trường Đại học Kỹ thuật Mật mã và Viện Nghiên cứu Khoa học Kỹ thuật Mật mã.",
-    "Tiền thân: Tiền thân của KMA bao gồm Trường Cán bộ Cơ yếu Trung ương, Trường Đại học Kỹ thuật Mật mã và Viện Nghiên cứu Khoa học Kỹ thuật Mật mã.",
-    "Vị thế: KMA được chính phủ Việt Nam lựa chọn là một trong tám cơ sở trọng điểm đào tạo nhân lực an toàn thông tin quốc gia.",
-    "Cơ sở đào tạo: Học viện Kỹ thuật Mật mã (KMA) hiện có 02 cơ sở. Trụ sở chính tại 141 Chiến Thắng, Hà Nội. Cơ sở phía Nam tại 17A Cộng Hòa, TP.HCM.",
-    "Nhiệm vụ: Nhiệm vụ quan trọng của Học viện Kỹ thuật Mật mã là tổ chức đào tạo chuyên ngành mật mã, an toàn thông tin.",
-    "Ký túc xá: KMA có ký túc xá dành riêng cho sinh viên hệ quân sự tại cơ sở Hà Nội.",
-    "Hệ đào tạo: Học viện Kỹ thuật Mật mã (KMA) có chương trình đào tạo hệ quân sự và hệ dân sự.",
-    "Tuyển sinh đại học: Hiện tại, KMA tuyển sinh 3 ngành: An toàn thông tin, Công nghệ thông tin, Kỹ thuật điện tử viễn thông.",
-    "Điểm chuẩn 2025: An toàn thông tin: 24,42; Công nghệ thông tin: 24,17; Điện tử viễn thông: 23,48.",
-    "Học phí: Học phí hệ dân sự KMA năm 2024-2025 khoảng 525.000 VNĐ/tín chỉ.",
-    "Cách tính điểm tổng kết: Điểm tổng kết = Điểm quá trình * 0.3 + Điểm thi cuối kỳ * 0.7.",
-    "Trang web chính thức KMA: https://actvn.edu.vn/",
-    "Cổng thông tin đào tạo KMA: https://ktdbcl.actvn.edu.vn/dang-nhap.html"
-]
-
-vectorizer = TfidfVectorizer()
-kb_vectors = vectorizer.fit_transform(kma_knowledge_base)
-
-def retrieve_kma_info(query, top_k=2):
-    try:
-        query_vec = vectorizer.transform([query])
-        sims = cosine_similarity(query_vec, kb_vectors)[0]
-        top_indices = sims.argsort()[-top_k:][::-1]
-        results = [kma_knowledge_base[idx] for idx in top_indices if sims[idx] > 0.1]
-        return "\n".join(results)
-    except: return ""
-
-def search_internet(query, max_results=3):
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
-            if results:
-                return "\n".join([f"- {r['title']}: {r['body']}" for r in results])
-        return ""
-    except: return ""
-
 # ---------------------------------------------------------------------------
-# 2. DATABASE NỘI BỘ
-# ---------------------------------------------------------------------------
-def get_db_connection():
-    db_url = os.environ.get('DATABASE_URL')
-    if not db_url: return None
-    return psycopg2.connect(db_url)
-
-def init_db():
-    conn = get_db_connection()
-    if not conn: return
-    cur = conn.cursor()
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS Users (
-            id SERIAL PRIMARY KEY, 
-            username VARCHAR(50) UNIQUE NOT NULL, 
-            password VARCHAR(255) NOT NULL
-        )
-    ''')
-    conn.commit()
-    cur.close()
-    conn.close()
-
-init_db()
-
-# ---------------------------------------------------------------------------
-# 3. CÁC ROUTE GIAO DIỆN (ĐÃ FIX LỖI 404)
-# ---------------------------------------------------------------------------
-
-@app.route('/')
-def home():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    return render_template('index.html', user=session['user'])
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        conn = get_db_connection()
-        if not conn: return "Lỗi kết nối Database!"
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute('SELECT * FROM Users WHERE username = %s', (username,))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
-        if user and check_password_hash(user['password'], password):
-            session['user'] = user['username']
-            return redirect(url_for('home'))
-        flash("Sai tài khoản hoặc mật khẩu!", "danger")
-    return render_template('login.html')
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        if not username or not password:
-            flash("Vui lòng điền đủ thông tin!", "warning")
-            return redirect(url_for('register'))
-        hashed_pw = generate_password_hash(password)
-        conn = get_db_connection()
-        cur = conn.cursor()
-        try:
-            cur.execute('INSERT INTO Users (username, password) VALUES (%s, %s)', (username, hashed_pw))
-            conn.commit()
-            flash("Đăng ký thành công!", "success")
-            return redirect(url_for('login'))
-        except IntegrityError:
-            flash("Tên đăng nhập đã tồn tại!", "warning")
-        finally:
-            cur.close()
-            conn.close()
-    return render_template('register.html')
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
-
-# ---------------------------------------------------------------------------
-# 4. ROUTE CHATBOT AI
+# ROUTE CHATBOT AI ĐÃ NÂNG CẤP (VISION + RAG + INTERNET SEARCH + TRÍ NHỚ)
 # ---------------------------------------------------------------------------
 @app.route('/chat', methods=['POST'])
 def chat():
-    if 'user' not in session:
-        return jsonify({"answer": "Vui lòng đăng nhập!"}), 401
-    
-    data = request.json
-    user_message = data.get('message', '')
-    image_data = data.get('image', None)
-    chat_history = data.get('history', [])
+if 'user' not in session:
+@@ -236,58 +239,60 @@ def chat():
 
-    try:
-        kma_context = retrieve_kma_info(user_message)
-        web_context = search_internet(user_message)
-        current_time = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+data = request.json
+user_message = data.get('message', '')
+    image_data = data.get('image', None) # Lấy dữ liệu ảnh nếu có
+    chat_history = data.get('history', []) # Nhận lịch sử chat từ giao diện
+    image_data = data.get('image', None) 
+    chat_history = data.get('history', []) 
 
-        system_prompt = f"Bạn là Lavie, trợ lý KMA. Thời gian: {current_time}. Thông tin: {kma_context} {web_context}"
+try:
+        # 1. Rút trích dữ liệu RAG (nếu người dùng có nhắn text)
+        retrieved_context = retrieve_kma_info(user_message) if user_message else ""
+        # 1. Rút trích dữ liệu RAG (Nội bộ KMA)
+        kma_context = retrieve_kma_info(user_message) if user_message else ""
         
-        messages = [{"role": "system", "content": system_prompt}]
-        if chat_history: messages.extend(chat_history[-6:])
+        # 2. Tìm kiếm thêm trên Internet (Google/DuckDuckGo)
+        web_context = search_internet(user_message) if user_message else ""
+        
+current_time = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
 
-        if image_data:
-            messages.append({"role": "user", "content": [{"type": "text", "text": user_message or "Phân tích ảnh"}, {"type": "image_url", "image_url": {"url": image_data}}]})
-            model = "llama-3.2-11b-vision-preview"
-        else:
-            messages.append({"role": "user", "content": user_message})
-            model = "llama-3.3-70b-versatile"
+        # 2. Cấu hình System Prompt (Kết hợp cả nhiệm vụ đọc ảnh và kiến thức KMA)
+        system_prompt = f"""Bạn là Lavie, trợ lý ảo cực kỳ thân thiện, thông minh của Học viện Kỹ thuật Mật mã (KMA).
+        # 3. Cấu hình System Prompt (Bơm cả 2 luồng dữ liệu vào)
+        system_prompt = f"""Bạn là Lavie, trợ lý ảo thông minh của Học viện Kỹ thuật Mật mã (KMA).
+Hôm nay là: {current_time}
 
-        response = client.chat.completions.create(messages=messages, model=model)
-        return jsonify({"answer": response.choices[0].message.content})
-    except Exception as e:
-        return jsonify({"answer": f"Lỗi: {str(e)}"}), 500
+Dữ liệu nội bộ MỚI NHẤT của trường (ưu tiên sử dụng):
+---
+{retrieved_context if retrieved_context else "Không có thông tin nội bộ đặc biệt nào được tìm thấy."}
+---
+[THÔNG TIN NỘI BỘ KMA TỪ CƠ SỞ DỮ LIỆU]:
+{kma_context if kma_context else "Không có thông tin nội bộ liên quan."}
 
-if __name__ == '__main__':
-    app.run(debug=True)
+[THÔNG TIN TÌM KIẾM TỪ INTERNET]:
+{web_context if web_context else "Không có thông tin từ internet."}
+
+Nhiệm vụ:
+1. Nếu người dùng gửi ảnh đồ thị, hãy phân tích kỹ các đỉnh, cạnh, suy luận logic tìm sắc số.
+2. Nếu được hỏi thông tin, dùng dữ liệu nội bộ ở trên để trả lời chính xác.
+3. Xưng hô 'Lavie' và gọi người dùng là 'bạn'. Trả lời tự nhiên, hiện đại, có emoji."""
+1. Trả lời câu hỏi của người dùng. Ưu tiên dùng [THÔNG TIN NỘI BỘ] nếu câu hỏi liên quan đến KMA.
+2. Nếu hỏi kiến thức ngoài hoặc tin tức mới, hãy tổng hợp từ [THÔNG TIN TÌM KIẾM TỪ INTERNET] để trả lời.
+3. Nếu gửi ảnh đồ thị, hãy tập trung phân tích tìm sắc số (chromatic number).
+4. Xưng hô 'Lavie' và 'bạn', nói chuyện tự nhiên, lưu loát, có emoji."""
+
+messages = [{"role": "system", "content": system_prompt}]
+
+        # 3. Thêm lịch sử trò chuyện (Giữ 8 tin nhắn gần nhất để AI hiểu ngữ cảnh)
+if chat_history:
+messages.extend(chat_history[-8:])
+
+        # 4. Phân luồng: Nếu có ảnh thì dùng Model Vision, nếu không thì dùng Model Text siêu tốc
+if image_data:
+            prompt_text = user_message if user_message else "Hãy phân tích đồ thị trong ảnh này và tìm sắc số (chromatic number) của nó."
+            prompt_text = user_message if user_message else "Hãy phân tích đồ thị trong ảnh này."
+messages.append({
+"role": "user",
+"content": [
+{"type": "text", "text": prompt_text},
+{"type": "image_url", "image_url": {"url": image_data}}
+]
+})
+            # Model hỗ trợ Vision trên Groq
+active_model = "llama-3.2-11b-vision-preview" 
+else:
+messages.append({
+"role": "user",
+"content": user_message
+})
+            # Model xử lý Text siêu tốc
+active_model = "llama-3.1-8b-instant"
+
+        # 5. Gọi API Groq
+chat_completion = client.chat.completions.create(
+messages=messages,
+model=active_model,
+            temperature=0.7, # Độ sáng tạo vừa phải
+            temperature=0.7, 
+)
+return jsonify({"answer": chat_completion.choices[0].message.content})
