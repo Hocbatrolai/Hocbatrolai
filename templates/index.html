@@ -1688,18 +1688,27 @@ input#vertices {
     function cleanTextForSpeech(text) {
         let clean = text;
         
-        // 1. XÓA SẠCH EMOJI (Sử dụng chuẩn Unicode hiện đại nhất)
+        // 1. XÓA SẠCH EMOJI
         clean = clean.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '');
 
-        // 2. Lọc bỏ các ký tự Markdown (*, _, #, ~)
-        clean = clean.replace(/[*#_~`>]/g, '');
+        // 2. Lọc bỏ các ký tự Markdown (Đã gỡ dấu # để không bị mất chữ C#)
+        clean = clean.replace(/[*_~`>]/g, '');
         
         // 3. Thay thế đường link
         clean = clean.replace(/(https?:\/\/[^\s]+)/g, 'một đường dẫn liên kết');
+
+        // 4. Xử lý "ngoại lệ" thủ công cho C++ và C# để an toàn tuyệt đối
+        clean = clean.replace(/C\+\+/gi, "xê cộng cộng");
+        clean = clean.replace(/C#/gi, "xê thăng");
         
-        // 4. Phát âm theo từ điển KMA
+        // 5. Phát âm theo từ điển KMA (Tự động bảo vệ ký tự đặc biệt)
         for (const [word, pronunciation] of Object.entries(pronunciationDict)) {
-            const regex = new RegExp(`\\b${word}\\b`, 'gi');
+            // Bỏ qua C++ và C# ở đây vì đã xử lý ngoại lệ ở bước 4
+            if (word === "C++" || word === "C#") continue; 
+            
+            // Mặc giáp (escape) cho các ký tự đặc biệt tránh lỗi Regex sập web
+            const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`\\b${safeWord}\\b`, 'gi');
             clean = clean.replace(regex, pronunciation);
         }
         
