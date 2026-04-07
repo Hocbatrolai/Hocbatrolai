@@ -1577,19 +1577,106 @@ input#vertices {
     }
 
     // --- TỪ ĐIỂN PHÁT ÂM TIẾNG VIỆT ---
+   // --- TỪ ĐIỂN PHÁT ÂM TIẾNG VIỆT ---
+   
     const pronunciationDict = {
+        // 1. TÊN RIÊNG & VIẾT TẮT CHUNG
         "Lavie": "La vi e",
         "KMA": "ca mờ a",
+        "MTP": "em ti pi",
+        "vv": "vân vân",
+        "v.v": "vân vân",
+
+        // 2. MẬT MÃ & AN TOÀN THÔNG TIN (Chuyên ngành KMA)
         "CTF": "xê tê ép",
-        "IT": "ai ti",
-        "AI": "ây ai",
         "Pentest": "pen test",
-        "Groq": "gờ róc",
-        "RAG": "rác",
+        "Hacker": "hắc cơ",
+        "Malware": "man we",
+        "DDoS": "đi đót",
+        "Phishing": "phít sinh",
+        "RSA": "rờ ét a",
+        "AES": "a e ét",
+        "MD5": "mờ đê năm",
+        "SHA": "ét hát a",
+        "Hash": "hát sờ",
+        "Cyber": "sai bơ",
+        "Security": "xê kiu ri ti",
+
+        // 3. TOÁN RỜI RẠC & LÝ THUYẾT ĐỒ THỊ
+        "Welsh-Powell": "weo pao eo",
+        "Backtracking": "bách trác king",
+        "Heuristic": "hiu rít tích",
+        "Greedy": "gờ rí đi",
+        "BFS": "bi ép ét",
+        "DFS": "đi ép ét",
+        "Dijkstra": "đi dít tra",
+        "Kruskal": "cờ rút can",
+        "Prim": "pờ rim",
+        "Bellman-Ford": "beo man pho",
+        "Graph": "gờ ráp",
+        "Matrix": "ma trích",
+        "Node": "nốt",
+        "Edge": "ét gi",
+
+        // 4. LẬP TRÌNH & PHÁT TRIỂN WEB
+        "IT": "ai ti",
+        "INTERNET": "in tơ nét",
         "Backend": "bách en",
         "Frontend": "phờ rôn en",
-        "INTERNET": "in tơ nét",
-        "MTP": "em ti pi"
+        "Java": "gia va",
+        "HTML": "hát tê em eo", 
+        "CSS": "xê ét ét",
+        "JavaScript": "gia va sờ cờ ríp",
+        "JS": "gi ét",
+        "PHP": "pê hát pê",
+        "Python": "pai thon",
+        "C++": "xê cộng cộng",
+        "C#": "xê thăng",
+        "API": "ây pi ai",
+        "UI": "iu ai",
+        "UX": "iu ích",
+        "SQL": "ét quy eo",
+        "JSON": "giê sơn",
+        "Git": "gít",
+        "GitHub": "gít hắp",
+
+        // 5. CÔNG NGHỆ LÕI & AI
+        "AI": "ây ai",
+        "Groq": "gờ róc",
+        "RAG": "rác",
+        "LLM": "eo eo em",
+        "Prompt": "pờ rôm",
+        "Machine Learning": "mờ sin lơn ninh",
+
+        // 6. HỆ THỐNG & MẠNG MÁY TÍNH
+        "HTTP": "hát tê tê pê",
+        "HTTPS": "hát tê tê pê ét",
+        "TCP": "ti xi pi",
+        "IP": "ai pi",
+        "CPU": "xê pê u",
+        "GPU": "gờ pê u",
+        "RAM": "ram",
+        "Linux": "lai nức",
+        "Windows": "win đâu",
+        "macOS": "mác ô ét",
+        "App": "áp",
+        "Web": "wép",
+        // --- TỪ VỰNG LẬP TRÌNH & VIẾT TẮT ---
+        "Java": "gia va",
+        "HTML": "hát tê em eo", 
+        "CSS": "xê ét ét",
+        "JavaScript": "gia va sờ cờ ríp",
+        "JS": "gi ét",
+        "Python": "pai thon", // Thêm sẵn Python cho bạn nếu cần
+        "C++": "xê cộng cộng",
+        "vv": "vân vân",
+        "v.v": "vân vân",
+        "PHP": "Pê hát Pê",
+        "Google": "gu gồ",
+        "PHP": "Pê hát Pê",
+        "MySQL": "mai ét quy eo",
+        "MySQL": "ét quy eo"
+        
     };
 
     function cleanTextForSpeech(text) {
