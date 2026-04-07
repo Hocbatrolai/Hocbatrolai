@@ -223,6 +223,9 @@ def logout():
 # ---------------------------------------------------------------------------
 # ROUTE CHATBOT AI ĐÃ NÂNG CẤP
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# ROUTE CHATBOT AI ĐÃ NÂNG CẤP (GỘP CHUNG VISION, RAG VÀ TRÍ NHỚ)
+# ---------------------------------------------------------------------------
 @app.route('/chat', methods=['POST'])
 def chat():
     if 'user' not in session:
@@ -234,14 +237,33 @@ def chat():
     data = request.json
     user_message = data.get('message', '')
     image_data = data.get('image', None) # Lấy dữ liệu ảnh nếu có
+    chat_history = data.get('history', []) # Nhận lịch sử chat từ giao diện
 
     try:
-        # Cấu hình tính cách của Lavie
-        system_prompt = "Bạn là Lavie, trợ lý ảo thông minh của Học viện Kỹ thuật Mật mã (KMA). Khi được cung cấp hình ảnh đồ thị, hãy phân tích kỹ các đỉnh, các cạnh và suy luận logic để tìm ra sắc số (chromatic number) của đồ thị đó. Giải thích từng bước cho sinh viên dễ hiểu."
-        
-        messages = [{"role": "system", "content": system_prompt}]
+        # 1. Rút trích dữ liệu RAG (nếu người dùng có nhắn text)
+        retrieved_context = retrieve_kma_info(user_message) if user_message else ""
+        current_time = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
 
-        # Nếu người dùng gửi ảnh -> Dùng Model Vision
+        # 2. Cấu hình System Prompt (Kết hợp cả nhiệm vụ đọc ảnh và kiến thức KMA)
+        system_prompt = f"""Bạn là Lavie, trợ lý ảo cực kỳ thân thiện, thông minh của Học viện Kỹ thuật Mật mã (KMA).
+Hôm nay là: {current_time}
+
+Dữ liệu nội bộ MỚI NHẤT của trường (ưu tiên sử dụng):
+---
+{retrieved_context if retrieved_context else "Không có thông tin nội bộ đặc biệt nào được tìm thấy."}
+---
+Nhiệm vụ:
+1. Nếu người dùng gửi ảnh đồ thị, hãy phân tích kỹ các đỉnh, cạnh, suy luận logic tìm sắc số.
+2. Nếu được hỏi thông tin, dùng dữ liệu nội bộ ở trên để trả lời chính xác.
+3. Xưng hô 'Lavie' và gọi người dùng là 'bạn'. Trả lời tự nhiên, hiện đại, có emoji."""
+
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # 3. Thêm lịch sử trò chuyện (Giữ 8 tin nhắn gần nhất để AI hiểu ngữ cảnh)
+        if chat_history:
+            messages.extend(chat_history[-8:])
+
+        # 4. Phân luồng: Nếu có ảnh thì dùng Model Vision, nếu không thì dùng Model Text siêu tốc
         if image_data:
             prompt_text = user_message if user_message else "Hãy phân tích đồ thị trong ảnh này và tìm sắc số (chromatic number) của nó."
             messages.append({
@@ -251,74 +273,24 @@ def chat():
                     {"type": "image_url", "image_url": {"url": image_data}}
                 ]
             })
-            # Sử dụng model hỗ trợ đọc ảnh của Groq
-            active_model = "llama-3.2-11b-vision-preview"
-            
-        # Nếu chỉ gửi text bình thường -> Dùng Model Text siêu tốc
+            # Model hỗ trợ Vision trên Groq
+            active_model = "llama-3.2-11b-vision-preview" 
         else:
             messages.append({
                 "role": "user",
                 "content": user_message
             })
+            # Model xử lý Text siêu tốc
             active_model = "llama-3.1-8b-instant"
 
-        # Gọi API
+        # 5. Gọi API Groq
         chat_completion = client.chat.completions.create(
             messages=messages,
             model=active_model,
-        )
-        return jsonify({"answer": chat_completion.choices[0].message.content})
-        
-    except Exception as e:
-        print(f"Lỗi AI: {e}")
-        return jsonify({"answer": f"Xin lỗi, Lavie gặp lỗi khi xử lý: {str(e)}"}), 500
-
-    data = request.json
-    user_message = data.get('message', '')
-    # TÍNH NĂNG 1: TRÍ NHỚ - Nhận lịch sử chat từ giao diện
-    chat_history = data.get('history', []) 
-
-    try:
-        # TÍNH NĂNG 3 (Tiếp): Rút trích dữ liệu liên quan từ câu hỏi
-        retrieved_context = retrieve_kma_info(user_message)
-        
-        # TÍNH NĂNG 4: BƠM DỮ LIỆU ĐỘNG (Thời gian thực)
-        current_time = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
-
-        # Khởi tạo System Prompt với RAG
-        system_prompt = f"""Bạn là Lavie, trợ lý ảo cực kỳ thân thiện, thông minh và năng động của Học viện Kỹ thuật Mật mã (KMA).
-Hôm nay là: {current_time}
-
-Dưới đây là cơ sở dữ liệu nội bộ MỚI NHẤT của trường. Hãy LUÔN ƯU TIÊN dùng thông tin này để trả lời câu hỏi:
----
-{retrieved_context if retrieved_context else "Không có thông tin nội bộ đặc biệt nào được tìm thấy cho câu hỏi này."}
----
-
-Quy tắc:
-1. Xưng hô là 'Lavie' và gọi người dùng là 'bạn'.
-2. Nếu câu hỏi nằm trong cơ sở dữ liệu nội bộ, hãy trả lời chính xác theo đó.
-3. Nếu không có dữ liệu nội bộ, hãy dùng kiến thức ở trên internet.
-4. Trả lời đầy đủ, tự nhiên, hiện đại, có emoji."""
-
-        messages = [{"role": "system", "content": system_prompt}]
-        
-        # Thêm lịch sử trò chuyện (giữ 8 tin nhắn gần nhất để AI hiểu ngữ cảnh)
-        messages.extend(chat_history[-8:])
-        
-        # Thêm câu hỏi hiện tại
-        messages.append({"role": "user", "content": user_message})
-
-        # TÍNH NĂNG 2: MODEL XỊN HƠN (Llama 3.1 70B)
-        chat_completion = client.chat.completions.create(
-            messages=messages,
-            model="llama-3.1-8b-instant",
             temperature=0.7, # Độ sáng tạo vừa phải
         )
         return jsonify({"answer": chat_completion.choices[0].message.content})
         
     except Exception as e:
         print(f"Lỗi AI: {e}")
-        return jsonify({"answer": f"Lỗi: {str(e)}"}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
+        return jsonify({"answer": f"Xin lỗi, Lavie gặp lỗi khi xử lý: {str(e)}"}), 500
