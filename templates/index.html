@@ -1614,8 +1614,10 @@ input#vertices {
     }
 
     // --- HÀM: Đọc văn bản ---
+  // --- HÀM: Đọc văn bản bằng giọng NỮ ---
     function speakText(text) {
         if (!isBotVoiceEnabled || !('speechSynthesis' in window)) return;
+
         window.speechSynthesis.cancel();
 
         const cleanText = cleanTextForSpeech(text);
@@ -1624,14 +1626,21 @@ input#vertices {
         const utterance = new SpeechSynthesisUtterance(cleanText);
         utterance.lang = 'vi-VN'; 
         utterance.rate = 1.05;    
-        utterance.pitch = 1.0;
+        utterance.pitch = 1.2; // Tăng pitch lên 1.2 giúp giọng có độ thanh cao hơn, giống nữ giới hơn
 
         if (availableVoices.length === 0) loadVoices();
 
-        const vnVoice = availableVoices.find(v => v.name.includes('HoaiMy')) || 
-                        availableVoices.find(v => v.name.includes('Google') && v.lang.includes('vi')) || 
-                        availableVoices.find(v => v.name.includes('Linh')) || 
-                        availableVoices.find(v => v.lang === 'vi-VN' || v.lang === 'vi_VN' || v.lang.includes('vi'));
+        // 1. Lọc ra danh sách TẤT CẢ giọng tiếng Việt, nhưng LOẠI BỎ giọng Nam (Microsoft An)
+        const vietnameseVoices = availableVoices.filter(v => 
+            (v.lang === 'vi-VN' || v.lang === 'vi_VN' || v.lang.includes('vi')) && 
+            !v.name.includes('An') // Chặn đứng anh chàng "Microsoft An"
+        );
+
+        // 2. Tìm giọng Nữ xịn nhất trong danh sách vừa lọc
+        const vnVoice = vietnameseVoices.find(v => v.name.includes('Google')) || // Top 2 Nữ: Google (Chrome)
+                        vietnameseVoices.find(v => v.name.includes('HoaiMy')) || // Top 1 Nữ: Hoài My (Edge)
+                        vietnameseVoices.find(v => v.name.includes('Linh')) ||   // Top 3 Nữ: Linh (Mac/iOS)
+                        vietnameseVoices[0]; // Hoặc lấy giọng nữ bất kỳ còn lại
 
         if (vnVoice) {
             utterance.voice = vnVoice;
@@ -1639,7 +1648,6 @@ input#vertices {
 
         window.speechSynthesis.speak(utterance);
     }
-
     // 1. Xử lý khi người dùng chọn ảnh
     document.getElementById('image-input').addEventListener('change', function(e) {
         const file = e.target.files[0];
