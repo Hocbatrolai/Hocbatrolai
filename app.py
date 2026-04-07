@@ -74,6 +74,7 @@ kma_knowledge_base = [
     "Hội thảo: KMA tổ chức Hội thảo Khoa học quốc tế về 'Mật mã và An toàn thông tin' lần thứ nhất vào năm 2024.",
     "Huân chương: Năm 1986, KMA nhận Huân chương Chiến công hạng Nhì. Năm 2021 (kỷ niệm 45 năm), KMA nhận Huân chương Bảo vệ Tổ quốc hạng Nhì.",
     "Phong trào sinh viên: Sinh viên KMA thường tham gia thi Capture The Flag (CTF) và các CLB như An toàn thông tin, Xung kích, Máu mật mã.",
+    "Phần thưởng quốc tế: Học viện Kỹ thuật Mật mã đã được nhận các phần thưởng quốc tế như: Huân chương Tự do hạng Nhì và Huân chương Lao động hạng Nhì của Nhà nước Lào; Huân chương Bảo vệ Tổ quốc hạng Nhì của Nhà nước Campuchia.",
 
     # --- KIẾN THỨC TOÁN RỜI RẠC & LÝ THUYẾT ĐỒ THỊ ---
     "Khái niệm Toán rời rạc: Toán rời rạc là nền tảng của công nghệ thông tin, nghiên cứu các cấu trúc dữ liệu rời rạc như tập hợp, logic, quan hệ và đồ thị.",
@@ -105,15 +106,14 @@ kma_knowledge_base = [
     "Khái niệm Cây (Tree): Cây là một đồ thị liên thông và không có chu trình. Cây có n đỉnh thì luôn có đúng n-1 cạnh.",
 
     # --- QUY ĐỊNH VĂN HÓA HỌC ĐƯỜNG & KIỂM SOÁT TẠI CỔNG KMA ---
-    
     "Quy định thẻ sinh viên KMA: Sinh viên, học viên Học viện Kỹ thuật Mật mã (KMA) bắt buộc phải đeo Thẻ học viên - sinh viên do Học viện cấp khi đến trường.",
     "Quy định trang phục áo KMA: Khi đến trường, sinh viên KMA phải mặc áo có cổ, tay áo lịch sự. Học viện khuyến khích sinh viên mặc áo có logo KMA hoặc đồng phục lớp.",
     "Quy định quần áo và giày dép KMA: Sinh viên Học viện Kỹ thuật Mật mã bắt buộc phải mặc quần dài. Tuyệt đối không được đi dép lê, dép xỏ ngón khi vào trường.",
     "Quy định trang phục nữ sinh viên KMA: Sinh viên nữ tại KMA tuyệt đối không được mặc váy trên đầu gối, váy xẻ cao hoặc các trang phục quá mỏng, gây phản cảm.",
     "Hình thức xử lý vi phạm cổng KMA: Bắt đầu từ thứ Hai, ngày 30/3/2026, Học viện Kỹ thuật Mật mã sẽ tăng cường kiểm tra tại cổng. Những trường hợp vi phạm sẽ không được vào trường.",
     "Lỗi không được vào cổng KMA: Sinh viên KMA sẽ không được phép vào Học viện nếu vi phạm quy định về trang phục (như đi dép lê, dép xỏ ngón) hoặc đi học muộn quá thời gian quy định.",
-    # --- QUY ĐỊNH & ĐIỀU KIỆN XÉT HỌC BỔNG KHUYẾN KHÍCH HỌC TẬP KMA ---
     
+    # --- QUY ĐỊNH & ĐIỀU KIỆN XÉT HỌC BỔNG KHUYẾN KHÍCH HỌC TẬP KMA ---
     "Điều kiện chung xét học bổng KMA: Sinh viên Học viện Kỹ thuật Mật mã muốn xét học bổng khuyến khích học tập phải đăng ký đủ số môn, đủ số tín chỉ theo chuẩn khung đào tạo từng học kỳ và phải nộp học phí đúng hạn quy định.",
     "Điều kiện điểm học tập xét học bổng KMA: Điểm trung bình chung tích lũy (TBCTL) học tập phải đạt loại Khá (từ 3.0 trở lên). Trừ các môn không tính điểm cần phải đạt, Học viện chỉ lấy điểm thi lần 1, sinh viên tuyệt đối không có môn thi lại, học lại.",
     "Điều kiện điểm rèn luyện xét học bổng KMA: Để dự xét học bổng, sinh viên KMA phải có điểm rèn luyện từ loại Khá (70 điểm trở lên) và nộp phiếu đánh giá điểm rèn luyện (mẫu 01 và 02) đúng thời gian quy định.",
@@ -121,18 +121,17 @@ kma_knowledge_base = [
     "Mức học bổng loại Giỏi tại KMA: Học bổng loại giỏi yêu cầu điểm TBCTL đạt loại giỏi và điểm rèn luyện đạt loại tốt. Số tiền học bổng loại giỏi bằng 1,1 lần mức học bổng loại khá.",
     "Mức học bổng loại Xuất sắc tại KMA: Học bổng loại xuất sắc yêu cầu điểm TBCTL đạt loại xuất sắc và điểm rèn luyện đạt loại xuất sắc. Số tiền học bổng loại xuất sắc bằng 1,2 lần mức học bổng loại khá.",
     "Nguyên tắc xét duyệt học bổng KMA: Căn cứ vào nguồn quỹ học bổng khuyến khích học tập, Văn phòng KMA sẽ xác định số suất học bổng và lấy danh sách theo thứ tự điểm từ cao xuống thấp cho từng khóa học, ngành học.",
+    
     # --- QUY CHẾ TÍNH ĐIỂM & GPA KMA ---
     "Cách tính điểm tổng kết 1 môn học (GPA môn) tại KMA: Điểm học phần được tính theo tỷ lệ 30% và 70%. Cụ thể: Điểm tổng kết = Điểm quá trình (chuyên cần, kiểm tra giữa kỳ) * 0.3 + Điểm thi kết thúc học phần (cuối kỳ) * 0.7.",
-    
     "Cách tính điểm trung bình chung tích lũy (GPA toàn khóa) tại KMA: Điểm tích lũy được tính bằng tổng của (điểm môn học thứ i nhân với số tín chỉ của môn đó) rồi chia cho tổng số tín chỉ đã học.",
-    # --- CÁC ĐƯỜNG LINK & NỀN TẢNG CHÍNH THỨC CỦA KMA ---
     
+    # --- CÁC ĐƯỜNG LINK & NỀN TẢNG CHÍNH THỨC CỦA KMA ---
     "Trang web (Website) trang chủ chính thức của Học viện Kỹ thuật Mật mã (KMA) có địa chỉ đường link là: https://actvn.edu.vn/",
     "Fanpage Facebook chính thức của Học viện Kỹ thuật Mật mã (KMA) dùng để cập nhật tin tức, sự kiện và thông báo có đường link là: https://www.facebook.com/hocvienkythuatmatma",
-    "Cổng thông tin đào tạo (Trang quản lý sinh viên KMA) dùng để xem lịch học, thời khóa biểu, đăng ký tín chỉ và xem điểm có địa chỉ đường link là: https://ktdbcl.actvn.edu.vn/dang-nhap.html)",
+    "Cổng thông tin đào tạo (Trang quản lý sinh viên KMA) dùng để xem lịch học, thời khóa biểu, đăng ký tín chỉ và xem điểm có địa chỉ đường link là: https://ktdbcl.actvn.edu.vn/dang-nhap.html",
     "Kênh YouTube chính thức của Học viện Kỹ thuật Mật mã (KMA) cung cấp các video sự kiện, giới thiệu và bài giảng có đường link là: https://www.youtube.com/channel/UCXy1Pqmu4v_5DTfL8pIVfkw/featured"
 ]
-
 # Khởi tạo công cụ tìm kiếm siêu nhẹ (TF-IDF Vectorizer)
 vectorizer = TfidfVectorizer()
 kb_vectors = vectorizer.fit_transform(kma_knowledge_base)
