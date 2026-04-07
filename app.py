@@ -9,6 +9,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from werkzeug.security import generate_password_hash, check_password_hash
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from duckduckgo_search import DDGS  
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'kma_secret_key_sieu_bao_mat')
