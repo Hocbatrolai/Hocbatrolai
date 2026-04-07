@@ -1577,14 +1577,41 @@ input#vertices {
     }
 
     // --- HÀM MỚI: Làm sạch văn bản để đọc tự nhiên hơn ---
+    // --- BƯỚC 1: TẠO TỪ ĐIỂN PHÁT ÂM ---
+    const pronunciationDict = {
+        "Lavie": "La vi e",
+        "KMA": "ca mờ a",
+        "CTF": "xê tê ép",
+        "IT": "ai ti",
+        "AI": "ây ai",
+        "Pentest": "pen test",
+        "Groq": "gờ róc",
+        "RAG": "rác",
+        "Backend": "bách en",
+        "Frontend": "ph rôn en",
+        "INTERNET": "in tơ nét
+            "MTP": "em ti pi"
+            
+        // Bạn có thể tự do thêm các từ khác vào đây theo mẫu: "Từ viết": "Cách đọc"
+    };
+
+    // --- BƯỚC 2: NÂNG CẤP HÀM LÀM SẠCH VÀ CHỈNH PHÁT ÂM ---
     function cleanTextForSpeech(text) {
         let clean = text;
-        // Bỏ các ký tự định dạng Markdown (*, _, #, `)
+
+        // 1. Lọc bỏ các ký tự Markdown (*, _, #, ~)
         clean = clean.replace(/[*#_~`>]/g, '');
-        // Thay thế các đường link bằng từ "đường dẫn" để tránh máy đọc từng chữ cái http...
-        clean = clean.replace(/(https?:\/\/[^\s]+)/g, 'một đường dẫn');
-        // Loại bỏ các emoji (tùy chọn) vì một số trình duyệt đọc sai tên emoji
-        clean = clean.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+        
+        // 2. Thay thế đường link để máy không đọc URL lằng nhằng
+        clean = clean.replace(/(https?:\/\/[^\s]+)/g, 'một đường dẫn liên kết');
+
+        // 3. Xử lý phát âm: Lặp qua từ điển và thay thế chữ
+        for (const [word, pronunciation] of Object.entries(pronunciationDict)) {
+            // Sử dụng RegExp để chỉ thay thế đúng từ đó ( \b giúp tìm từ độc lập, 'gi' là không phân biệt hoa/thường)
+            const regex = new RegExp(`\\b${word}\\b`, 'gi');
+            clean = clean.replace(regex, pronunciation);
+        }
+
         return clean.trim();
     }
 
