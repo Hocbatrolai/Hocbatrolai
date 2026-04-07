@@ -1552,19 +1552,19 @@ input#vertices {
 
 
 <script>
-    // 0. Khởi tạo bộ nhớ, biến ảnh và trạng thái giọng nói
+    // 0. Khởi tạo bộ nhớ, biến ảnh và trạng thái giọng nói (CHỈ KHAI BÁO 1 LẦN Ở ĐÂY)
     let chatHistory = [];
     let currentImageBase64 = null;
-    let isBotVoiceEnabled = true; // Mặc định bật giọng nói
-
-    // Tải trước danh sách giọng nói của trình duyệt (Khắc phục lỗi chưa kịp load đã đọc)
+    let isBotVoiceEnabled = true; 
     let availableVoices = [];
+
+    // Tải trước danh sách giọng nói của trình duyệt
     function loadVoices() {
         availableVoices = window.speechSynthesis.getVoices();
     }
     if ('speechSynthesis' in window) {
         window.speechSynthesis.onvoiceschanged = loadVoices;
-        loadVoices(); // Gọi lần đầu
+        loadVoices(); 
     }
 
     // --- HÀM: Bật tắt giọng nói ---
@@ -1572,12 +1572,11 @@ input#vertices {
         isBotVoiceEnabled = !isBotVoiceEnabled;
         document.getElementById('btn-bot-voice').innerText = isBotVoiceEnabled ? "🔊" : "🔇";
         if (!isBotVoiceEnabled) {
-            window.speechSynthesis.cancel(); // Tắt ngay lập tức nếu đang nói
+            window.speechSynthesis.cancel();
         }
     }
 
-    // --- HÀM MỚI: Làm sạch văn bản để đọc tự nhiên hơn ---
-    // --- BƯỚC 1: TẠO TỪ ĐIỂN PHÁT ÂM ---
+    // --- TỪ ĐIỂN PHÁT ÂM TIẾNG VIỆT ---
     const pronunciationDict = {
         "Lavie": "La vi e",
         "KMA": "ca mờ a",
@@ -1588,56 +1587,41 @@ input#vertices {
         "Groq": "gờ róc",
         "RAG": "rác",
         "Backend": "bách en",
-        "Frontend": "ph rôn en",
-        "INTERNET": "in tơ nét
-            "MTP": "em ti pi"
-            
-        // Bạn có thể tự do thêm các từ khác vào đây theo mẫu: "Từ viết": "Cách đọc"
+        "Frontend": "phờ rôn en",
+        "INTERNET": "in tơ nét",
+        "MTP": "em ti pi"
     };
 
-    // --- BƯỚC 2: NÂNG CẤP HÀM LÀM SẠCH VÀ CHỈNH PHÁT ÂM ---
     function cleanTextForSpeech(text) {
         let clean = text;
-
-        // 1. Lọc bỏ các ký tự Markdown (*, _, #, ~)
         clean = clean.replace(/[*#_~`>]/g, '');
-        
-        // 2. Thay thế đường link để máy không đọc URL lằng nhằng
         clean = clean.replace(/(https?:\/\/[^\s]+)/g, 'một đường dẫn liên kết');
-
-        // 3. Xử lý phát âm: Lặp qua từ điển và thay thế chữ
         for (const [word, pronunciation] of Object.entries(pronunciationDict)) {
-            // Sử dụng RegExp để chỉ thay thế đúng từ đó ( \b giúp tìm từ độc lập, 'gi' là không phân biệt hoa/thường)
             const regex = new RegExp(`\\b${word}\\b`, 'gi');
             clean = clean.replace(regex, pronunciation);
         }
-
         return clean.trim();
     }
 
-    // --- HÀM: Đọc văn bản lưu loát ---
+    // --- HÀM: Đọc văn bản ---
     function speakText(text) {
         if (!isBotVoiceEnabled || !('speechSynthesis' in window)) return;
-
-        // Dừng câu nói trước đó nếu chưa nói xong
         window.speechSynthesis.cancel();
 
         const cleanText = cleanTextForSpeech(text);
         if (!cleanText) return;
 
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = 'vi-VN'; // Ép ngôn ngữ tiếng Việt
-        utterance.rate = 1.05;    // Tăng tốc độ đọc lên một xíu (1.05) để nghe năng động, bớt rề rà
+        utterance.lang = 'vi-VN'; 
+        utterance.rate = 1.05;    
         utterance.pitch = 1.0;
 
-        // Nếu danh sách giọng nói vẫn trống, thử lấy lại lần nữa
         if (availableVoices.length === 0) loadVoices();
 
-        // Thuật toán ưu tiên tìm giọng tiếng Việt hay nhất
-        const vnVoice = availableVoices.find(v => v.name.includes('HoaiMy')) || // Top 1: Giọng Hoài My (Microsoft Edge)
-                        availableVoices.find(v => v.name.includes('Google') && v.lang.includes('vi')) || // Top 2: Google (Chrome)
-                        availableVoices.find(v => v.name.includes('Linh')) || // Top 3: Linh (Safari/macOS)
-                        availableVoices.find(v => v.lang === 'vi-VN' || v.lang === 'vi_VN' || v.lang.includes('vi')); // Mặc định bất kỳ giọng VN nào
+        const vnVoice = availableVoices.find(v => v.name.includes('HoaiMy')) || 
+                        availableVoices.find(v => v.name.includes('Google') && v.lang.includes('vi')) || 
+                        availableVoices.find(v => v.name.includes('Linh')) || 
+                        availableVoices.find(v => v.lang === 'vi-VN' || v.lang === 'vi_VN' || v.lang.includes('vi'));
 
         if (vnVoice) {
             utterance.voice = vnVoice;
@@ -1679,7 +1663,6 @@ input#vertices {
         
         if (!message && !currentImageBase64) return;
 
-        // Hiển thị nội dung người dùng gửi
         if (currentImageBase64) {
             appendMessage(message ? "📷 [Ảnh]: " + message : "📷 Đang phân tích đồ thị...", 'user-msg');
         } else {
@@ -1689,7 +1672,6 @@ input#vertices {
         input.value = '';
         preview.style.display = "none";
 
-        // Hiển thị loading
         const tempId = 'loading-' + Date.now();
         appendMessage('Lavie đang suy nghĩ...', 'bot-msg', tempId);
 
@@ -1710,10 +1692,8 @@ input#vertices {
             if (data.answer) {
                 loadingMsg.innerText = data.answer;
 
-                // Gọi hàm đọc giọng nói
                 speakText(data.answer);
 
-                // Cập nhật trí nhớ
                 chatHistory.push({ "role": "user", "content": message || "Gửi ảnh đồ thị" });
                 chatHistory.push({ "role": "assistant", "content": data.answer });
 
@@ -1742,6 +1722,7 @@ input#vertices {
         return id;
     }
 </script>
+    
 
 <header>
     <div class="logo-container">
