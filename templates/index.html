@@ -1594,12 +1594,22 @@ input#vertices {
 
     function cleanTextForSpeech(text) {
         let clean = text;
+        
+        // 1. XÓA SẠCH EMOJI (Sử dụng chuẩn Unicode hiện đại nhất)
+        clean = clean.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '');
+
+        // 2. Lọc bỏ các ký tự Markdown (*, _, #, ~)
         clean = clean.replace(/[*#_~`>]/g, '');
+        
+        // 3. Thay thế đường link
         clean = clean.replace(/(https?:\/\/[^\s]+)/g, 'một đường dẫn liên kết');
+        
+        // 4. Phát âm theo từ điển KMA
         for (const [word, pronunciation] of Object.entries(pronunciationDict)) {
             const regex = new RegExp(`\\b${word}\\b`, 'gi');
             clean = clean.replace(regex, pronunciation);
         }
+        
         return clean.trim();
     }
 
