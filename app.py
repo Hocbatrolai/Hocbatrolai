@@ -17,8 +17,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'kma_secret_key_sieu_bao_mat')
 # ---------------------------------------------------------------------------
 # CẤU HÌNH AI & RAG (TÍNH NĂNG 3: RETRIEVAL-AUGMENTED GENERATION)
 # ---------------------------------------------------------------------------
+# Cách viết chuẩn và an toàn nhất
 GROQ_KEY = os.environ.get("GROQ_API_KEY")
-client = Groq(GROQ_API_KEY.) if GROQ_KEY else None
+client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
 
 # Đây là Cơ sở dữ liệu tri thức giả lập (Bạn có thể thêm hàng trăm câu vào đây)
 # CƠ SỞ DỮ LIỆU TRI THỨC NỘI BỘ KMA (ĐÃ GỘP TẤT CẢ THÔNG TIN MỚI NHẤT)
